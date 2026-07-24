@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 
 /**
  * Full happy-path run (source spec §27 / docs/13_TEST_PLAN.md): log in as the seeded demo user,
@@ -6,6 +6,16 @@ import { test, expect, type Page } from "@playwright/test";
  * the dev-only deterministic E2E test mode (see lib/e2e-test-mode.ts), and verify the champion
  * screen, points, and profile stats update.
  */
+
+/**
+ * A round can resolve (submission accepted -> WaitingBanner/next phase rendered) between an
+ * attempt's isVisible() check and its click(), e.g. because a previous attempt's submission was
+ * still in flight. A short per-click timeout turns that race into a fast no-op instead of
+ * Playwright's click() retrying against a detaching element for the full test timeout.
+ */
+async function clickIfPresent(locator: Locator) {
+  await locator.click({ timeout: 2000 }).catch(() => {});
+}
 
 async function playCurrentMatchToWin(page: Page) {
   for (let attempt = 0; attempt < 60; attempt++) {
@@ -21,17 +31,17 @@ async function playCurrentMatchToWin(page: Page) {
     const minorityBButton = page.locator("button", { hasText: "Bの少数派を狙う" });
 
     if (await declareHeading.isVisible().catch(() => false)) {
-      await numberButton.click();
-      await declarationOption.click();
-      await declareSubmit.click();
+      await clickIfPresent(numberButton);
+      await clickIfPresent(declarationOption);
+      await clickIfPresent(declareSubmit);
     } else if (await believeButton.isVisible().catch(() => false)) {
-      await believeButton.click();
+      await clickIfPresent(believeButton);
     } else if (await betrayButton.isVisible().catch(() => false)) {
-      await betrayButton.click();
+      await clickIfPresent(betrayButton);
     } else if (await readButton.isVisible().catch(() => false)) {
-      await readButton.click();
+      await clickIfPresent(readButton);
     } else if (await minorityBButton.isVisible().catch(() => false)) {
-      await minorityBButton.click();
+      await clickIfPresent(minorityBButton);
     }
 
     await page.waitForTimeout(600);

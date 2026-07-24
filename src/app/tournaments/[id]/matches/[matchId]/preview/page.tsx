@@ -10,6 +10,8 @@ import { ErrorState } from "@/components/common/error-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { GameRulesCard } from "@/components/common/game-rules-card";
+import { getGameMeta } from "@/config/games";
 import { Bot, Dices, User } from "lucide-react";
 
 interface MatchPreview {
@@ -17,6 +19,7 @@ interface MatchPreview {
   round: number;
   matchNumber: number;
   gameName: string;
+  gameId: string;
   tournamentLeagueName: string;
   me: {
     displayName: string;
@@ -60,6 +63,8 @@ export default function PreMatchPage({ params }: { params: Promise<{ id: string;
   if (error) return <AppScreen header={<FocusHeader title="対戦前" backHref={`/tournaments/${id}/bracket`} />}><ErrorState message={error} /></AppScreen>;
   if (!preview) return <AppScreen header={<FocusHeader title="対戦前" backHref={`/tournaments/${id}/bracket`} />}><LoadingState /></AppScreen>;
 
+  const gameMeta = getGameMeta(preview.gameId);
+
   return (
     <AppScreen header={<FocusHeader title={`ROUND ${preview.round} 第${preview.matchNumber}試合`} backHref={`/tournaments/${id}/bracket`} />}>
       <div className="flex flex-1 flex-col gap-5 px-4 pb-8 pt-6">
@@ -91,15 +96,19 @@ export default function PreMatchPage({ params }: { params: Promise<{ id: string;
           </div>
         )}
 
-        <Card>
-          <CardContent className="flex flex-col gap-2 py-4">
-            <p className="flex items-center gap-1.5 text-xs font-semibold text-arena-primary-soft">
-              <Dices className="h-3.5 w-3.5" />
-              ランダムで選ばれたゲーム
-            </p>
-            <p className="text-lg font-bold text-arena-white">{preview.gameName}</p>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col gap-2">
+          <p className="flex items-center gap-1.5 text-xs font-semibold text-arena-primary-soft">
+            <Dices className="h-3.5 w-3.5" />
+            ランダムで選ばれたゲーム
+          </p>
+          {gameMeta ? <GameRulesCard game={gameMeta} /> : (
+            <Card>
+              <CardContent className="py-4">
+                <p className="text-lg font-bold text-arena-white">{preview.gameName}</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
 
         <div className="flex-1" />
         <Button onClick={handleStart} disabled={starting} variant="gold">
