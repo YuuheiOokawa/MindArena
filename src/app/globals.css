@@ -67,3 +67,93 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Match-result / champion celebration effects (source spec §9, §25 — win/lose needs a beat of
+   presentation, not a flat swap of text). Kept CSS-only (no animation library) to match the rest
+   of the app; reduced-motion users get the same end state, just without the transition. */
+@keyframes arena-pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.arena-pop-in {
+  animation: arena-pop-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes arena-glow-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 24px -6px var(--arena-glow-color, rgba(224, 178, 86, 0.6));
+  }
+  50% {
+    box-shadow: 0 0 40px 2px var(--arena-glow-color, rgba(224, 178, 86, 0.85));
+  }
+}
+.arena-glow-pulse {
+  animation: arena-glow-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes arena-shake-once {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(5px);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+.arena-shake-once {
+  animation: arena-shake-once 0.5s ease-in-out 0.4s both;
+}
+
+@keyframes arena-confetti-fall {
+  0% {
+    opacity: 0;
+    transform: translate(0, -12px) rotate(0deg);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--arena-confetti-drift, 0px), 140px) rotate(var(--arena-confetti-spin, 360deg));
+  }
+}
+.arena-confetti-piece {
+  position: absolute;
+  top: 0;
+  left: var(--arena-confetti-left, 50%);
+  width: 7px;
+  height: 12px;
+  background: var(--arena-confetti-color, var(--color-arena-gold));
+  animation: arena-confetti-fall var(--arena-confetti-duration, 1.4s) ease-in var(--arena-confetti-delay, 0s) both;
+  border-radius: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arena-pop-in,
+  .arena-glow-pulse,
+  .arena-shake-once,
+  .arena-confetti-piece {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

@@ -8,7 +8,10 @@ import { LoadingState } from "@/components/common/loading-state";
 import { ErrorState } from "@/components/common/error-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ConfettiBurst } from "@/components/common/confetti-burst";
+import { AnimatedNumber } from "@/components/common/animated-number";
 import { Crown } from "lucide-react";
+import type { ReactNode } from "react";
 
 interface TournamentView {
   leagueName: string;
@@ -43,19 +46,23 @@ export default function ChampionPage({ params }: { params: Promise<{ id: string 
 
   return (
     <AppScreen>
-      <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
-        <div className="flex h-24 w-24 items-center justify-center rounded-full border-2 border-arena-gold bg-arena-gold/10 shadow-[0_0_40px_-8px_rgba(212,175,106,0.6)]">
+      <div className="relative flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
+        <ConfettiBurst count={32} />
+        <div
+          className="arena-pop-in arena-glow-pulse flex h-24 w-24 items-center justify-center rounded-full border-2 border-arena-gold bg-arena-gold/10"
+          style={{ "--arena-glow-color": "rgba(212, 175, 106, 0.7)" } as React.CSSProperties}
+        >
           <Crown className="h-12 w-12 text-arena-gold" />
         </div>
-        <div>
+        <div className="arena-pop-in" style={{ animationDelay: "0.15s" }}>
           <p className="text-2xl font-black tracking-wide text-arena-gold">優勝</p>
           <p className="mt-1 text-sm text-arena-silver">{tournament.leagueName}</p>
         </div>
 
-        <Card className="w-full">
+        <Card className="w-full arena-pop-in" style={{ animationDelay: "0.25s" }}>
           <CardContent className="flex flex-col gap-3 py-4">
-            <Row label="保有ポイント" value={profile.totalPoints.toLocaleString()} />
-            <Row label="優勝回数" value={`${profile.tournamentWins}回`} />
+            <Row label="保有ポイント" value={<AnimatedNumber value={profile.totalPoints} />} />
+            <Row label="優勝回数" value={<><AnimatedNumber value={profile.tournamentWins} />回</>} />
             <Row label="解放中のフレーム" value={profile.frame.current.name} />
           </CardContent>
         </Card>
@@ -68,7 +75,7 @@ export default function ChampionPage({ params }: { params: Promise<{ id: string 
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-center justify-between text-sm">
       <span className="text-arena-silver">{label}</span>
