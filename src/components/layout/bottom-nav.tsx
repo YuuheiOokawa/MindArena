@@ -31,7 +31,14 @@ export function BottomNav() {
                   active ? "text-arena-primary-soft" : "text-arena-silver/70 hover:text-arena-silver",
                 )}
               >
-                <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 1.8} />
+                <span
+                  className={cn(
+                    "flex h-7 w-11 items-center justify-center rounded-full transition-colors",
+                    active && "bg-arena-primary/15",
+                  )}
+                >
+                  <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 1.8} />
+                </span>
                 {item.label}
               </Link>
             </li>

@@ -25,6 +25,12 @@ interface MatchResultView {
 
 export default function MatchResultPage({ params }: { params: Promise<{ id: string; matchId: string }> }) {
   const { id, matchId } = use(params);
+  // Keyed on matchId so each match's result gets a fresh mount — otherwise the pop-in/confetti
+  // CSS animations (which only play once per element mount) wouldn't replay on a second win.
+  return <MatchResultSession key={matchId} id={id} matchId={matchId} />;
+}
+
+function MatchResultSession({ id, matchId }: { id: string; matchId: string }) {
   const router = useRouter();
   const [result, setResult] = useState<MatchResultView | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +47,11 @@ export default function MatchResultPage({ params }: { params: Promise<{ id: stri
     setNavigating(true);
     try {
       const resume = await apiClient.get<ResumeScreen>("/api/tournaments/resume");
-      router.push(resumeHref(resume));
+      const href = resumeHref(resume);
+      // Flags the bracket screen to play its "advanced to the next round" reveal — only relevant
+      // right after a win, and only meaningful when resume actually lands back on the bracket.
+      const withAdvanceFlag = result?.won && resume.screen === "bracket" ? `${href}?advanced=1` : href;
+      router.push(withAdvanceFlag);
     } catch {
       router.push(`/tournaments/${id}/bracket`);
     }

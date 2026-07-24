@@ -109,30 +109,33 @@ model User {
 }
 
 model PlayerProfile {
-  id                String   @id @default(cuid())
-  userId            String   @unique
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  displayName       String
-  totalPoints       Int      @default(0)
-  currentLeagueId   String
-  currentLeague     League   @relation(fields: [currentLeagueId], references: [id])
-  totalMatches      Int      @default(0)
-  totalWins         Int      @default(0)
-  totalLosses       Int      @default(0)
-  currentWinStreak  Int      @default(0)
-  bestWinStreak     Int      @default(0)
-  tournamentEntries Int      @default(0)
-  tournamentWins    Int      @default(0)
-  finalsReached     Int      @default(0)
-  selectedTitleId   String?
-  selectedFrameId   String?
-  showBotTag        Boolean  @default(true)
-  reducedMotion     Boolean  @default(false)
-  soundEnabled      Boolean  @default(true)
-  bgmEnabled        Boolean  @default(true)
-  vibrationEnabled  Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName          String
+  totalPoints          Int      @default(0)
+  prizeCurrency        Int      @default(0)
+  currentLeagueId      String
+  currentLeague        League   @relation(fields: [currentLeagueId], references: [id])
+  totalMatches         Int      @default(0)
+  totalWins            Int      @default(0)
+  totalLosses          Int      @default(0)
+  currentWinStreak     Int      @default(0)
+  bestWinStreak        Int      @default(0)
+  tournamentEntries    Int      @default(0)
+  tournamentWins       Int      @default(0)
+  finalsReached        Int      @default(0)
+  selectedTitleId      String?
+  selectedFrameId      String?
+  selectedBackgroundId String?
+  selectedBadgeId      String?
+  showBotTag           Boolean  @default(true)
+  reducedMotion        Boolean  @default(false)
+  soundEnabled         Boolean  @default(true)
+  bgmEnabled           Boolean  @default(true)
+  vibrationEnabled     Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   pointTransactions    PointTransaction[]
   gameStats            PlayerGameStats[]
@@ -140,9 +143,28 @@ model PlayerProfile {
   tournamentEntriesRel TournamentParticipant[]
   friendshipsSent      Friendship[]            @relation("FriendshipRequester")
   friendshipsReceived  Friendship[]            @relation("FriendshipAddressee")
+  leagueTrophies       LeagueTrophy[]
+  cosmeticPurchases    CosmeticPurchase[]
 
   @@index([totalPoints])
   @@map("player_profiles")
+}
+
+/**
+ * One row per league a player has ever won a tournament in; `count` accumulates repeat wins.
+ */
+model LeagueTrophy {
+  id              String        @id @default(cuid())
+  playerProfileId String
+  playerProfile   PlayerProfile @relation(fields: [playerProfileId], references: [id], onDelete: Cascade)
+  leagueId        String
+  league          League        @relation(fields: [leagueId], references: [id])
+  count           Int           @default(1)
+  firstWonAt      DateTime      @default(now())
+  lastWonAt       DateTime      @default(now()) @updatedAt
+
+  @@unique([playerProfileId, leagueId])
+  @@map("league_trophies")
 }
 
 model Friendship {
@@ -185,6 +207,7 @@ model League {
 
   profiles    PlayerProfile[]
   tournaments Tournament[]
+  trophies    LeagueTrophy[]
 
   @@index([displayOrder])
   @@map("leagues")
@@ -248,11 +271,33 @@ model CosmeticItem {
   name           String
   category       CosmeticCategory
   requiredPoints Int
+  /**
+   * Non-null makes this item purchasable in the shop for this many prizeCurrency, independent
+   * of requiredPoints (which stays the free auto-unlock threshold for FRAME/TITLE items).
+   */
+  price          Int?
   assetKey       String
   effectConfig   Json             @default("{}")
   isActive       Boolean          @default(true)
 
+  purchases CosmeticPurchase[]
+
   @@map("cosmetic_items")
+}
+
+/**
+ * Ownership record for an item bought in the shop with prizeCurrency (source: tournament wins).
+ */
+model CosmeticPurchase {
+  id              String        @id @default(cuid())
+  playerProfileId String
+  playerProfile   PlayerProfile @relation(fields: [playerProfileId], references: [id], onDelete: Cascade)
+  cosmeticItemId  String
+  cosmeticItem    CosmeticItem  @relation(fields: [cosmeticItemId], references: [id])
+  purchasedAt     DateTime      @default(now())
+
+  @@unique([playerProfileId, cosmeticItemId])
+  @@map("cosmetic_purchases")
 }
 
 model Announcement {
@@ -315,20 +360,20 @@ model TournamentParticipant {
 }
 
 model TournamentMatch {
-  id                   String                  @id @default(cuid())
+  id                   String                 @id @default(cuid())
   tournamentId         String
-  tournament           Tournament              @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournament           Tournament             @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   round                Int
   matchNumber          Int
   player1ParticipantId String?
-  player1              TournamentParticipant?  @relation("MatchPlayer1", fields: [player1ParticipantId], references: [id])
+  player1              TournamentParticipant? @relation("MatchPlayer1", fields: [player1ParticipantId], references: [id])
   player2ParticipantId String?
-  player2              TournamentParticipant?  @relation("MatchPlayer2", fields: [player2ParticipantId], references: [id])
+  player2              TournamentParticipant? @relation("MatchPlayer2", fields: [player2ParticipantId], references: [id])
   winnerParticipantId  String?
-  winner               TournamentParticipant?  @relation("MatchWinner", fields: [winnerParticipantId], references: [id])
+  winner               TournamentParticipant? @relation("MatchWinner", fields: [winnerParticipantId], references: [id])
   gameTypeId           String
-  gameType             GameType                @relation(fields: [gameTypeId], references: [id])
-  status               MatchStatus             @default(WAITING)
+  gameType             GameType               @relation(fields: [gameTypeId], references: [id])
+  status               MatchStatus            @default(WAITING)
   startedAt            DateTime?
   completedAt          DateTime?
 

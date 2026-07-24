@@ -15,3 +15,11 @@ export const BASE_POINT_REWARDS: Record<PointReason, number> = {
   [PointReason.ACHIEVEMENT_BONUS]: 0, // amount is supplied per-achievement, see config/achievements.ts
   [PointReason.ADMIN_ADJUSTMENT]: 0, // amount is supplied by the admin action itself
 };
+
+/**
+ * 賞金 (prizeCurrency) awarded for winning a tournament, before the league's rewardMultiplier —
+ * same scaling shape as BASE_POINT_REWARDS, but a distinct spendable wallet (see
+ * PlayerProfile.prizeCurrency) meant for the shop, not the points ladder that drives league
+ * placement.
+ */
+export const BASE_CHAMPION_PRIZE = 500;

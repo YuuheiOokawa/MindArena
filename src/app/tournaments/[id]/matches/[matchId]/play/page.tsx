@@ -32,6 +32,14 @@ interface RawState {
 
 export default function GamePlayPage({ params }: { params: Promise<{ id: string; matchId: string }> }) {
   const { id, matchId } = use(params);
+  // Keyed on matchId so every match gets a fully fresh component instance — this page's refs
+  // (navigatedRef, shownRoundsRef, revealPendingRef) track per-match progress and must never
+  // carry over from a previous match, even if Next.js were to reuse this component across a
+  // matchId change instead of remounting it.
+  return <GamePlaySession key={matchId} id={id} matchId={matchId} />;
+}
+
+function GamePlaySession({ id, matchId }: { id: string; matchId: string }) {
   const router = useRouter();
   const [myParticipantId, setMyParticipantId] = useState<string | null>(null);
   const [opponentId, setOpponentId] = useState<string | null>(null);

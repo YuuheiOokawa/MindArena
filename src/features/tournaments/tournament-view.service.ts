@@ -2,6 +2,7 @@ import { prisma } from "@/infrastructure/database/prisma";
 import { tournamentMatchRepository } from "@/infrastructure/repositories/tournament-match.repository";
 import { playerProfileRepository } from "@/infrastructure/repositories/player-profile.repository";
 import { AppError } from "@/lib/errors/app-error";
+import { BASE_CHAMPION_PRIZE } from "@/config/points";
 
 export async function getTournamentView(userId: string, tournamentId: string) {
   const profile = await playerProfileRepository.findByUserId(userId);
@@ -27,7 +28,9 @@ export async function getTournamentView(userId: string, tournamentId: string) {
     id: tournament.id,
     status: tournament.status,
     currentRound: tournament.currentRound,
+    leagueId: tournament.leagueId,
     leagueName: tournament.league.displayName,
+    championPrize: Math.round(BASE_CHAMPION_PRIZE * tournament.league.rewardMultiplier),
     maxPlayers: tournament.maxPlayers,
     participantCount: tournament.participants.length,
     myParticipantId: myParticipant?.id ?? null,

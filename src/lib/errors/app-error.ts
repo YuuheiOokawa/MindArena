@@ -13,6 +13,9 @@ export type AppErrorCode =
   | "FRIEND_REQUEST_EXISTS"
   | "FRIEND_REQUEST_NOT_FOUND"
   | "CANNOT_FRIEND_SELF"
+  | "INSUFFICIENT_FUNDS"
+  | "ALREADY_OWNED"
+  | "ITEM_NOT_OWNED"
   | "INTERNAL_ERROR";
 
 const DEFAULT_MESSAGES: Record<AppErrorCode, string> = {
@@ -30,6 +33,9 @@ const DEFAULT_MESSAGES: Record<AppErrorCode, string> = {
   FRIEND_REQUEST_EXISTS: "すでにフレンド申請が送信されています。",
   FRIEND_REQUEST_NOT_FOUND: "フレンド申請が見つかりませんでした。",
   CANNOT_FRIEND_SELF: "自分自身にはフレンド申請できません。",
+  INSUFFICIENT_FUNDS: "賞金が足りません。",
+  ALREADY_OWNED: "すでに所持しているアイテムです。",
+  ITEM_NOT_OWNED: "このアイテムはまだ所持していません。",
   INTERNAL_ERROR: "予期しないエラーが発生しました。時間をおいて再度お試しください。",
 };
 

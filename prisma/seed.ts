@@ -9,6 +9,7 @@ import { BOT_DIFFICULTY_BANDS, BOT_PERSONALITIES } from "../src/config/bots";
 import { ACHIEVEMENTS } from "../src/config/achievements";
 import { FRAME_TIERS } from "../src/config/frames";
 import { TITLES } from "../src/config/titles";
+import { SHOP_ITEMS } from "../src/config/shop-items";
 import { APP_CONFIG } from "../src/config/app";
 import { calculateReward } from "../src/domain/services/points.service";
 import { PointReason } from "../src/domain/enums";
@@ -179,7 +180,15 @@ async function seedCosmetics() {
     });
   }
 
-  console.log(`Seeded ${FRAME_TIERS.length} frames and ${TITLES.length} titles.`);
+  for (const item of SHOP_ITEMS) {
+    await prisma.cosmeticItem.upsert({
+      where: { code: item.code },
+      update: { name: item.name, category: item.category, requiredPoints: 0, price: item.price, assetKey: item.assetKey, isActive: true },
+      create: { code: item.code, name: item.name, category: item.category, requiredPoints: 0, price: item.price, assetKey: item.assetKey },
+    });
+  }
+
+  console.log(`Seeded ${FRAME_TIERS.length} frames, ${TITLES.length} titles, and ${SHOP_ITEMS.length} shop items.`);
 }
 
 async function seedDemoUser(entryLeagueId: string) {

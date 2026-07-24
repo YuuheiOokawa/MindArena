@@ -1,5 +1,7 @@
 import { playerProfileRepository } from "@/infrastructure/repositories/player-profile.repository";
 import { leagueRepository } from "@/infrastructure/repositories/league.repository";
+import { leagueTrophyRepository } from "@/infrastructure/repositories/league-trophy.repository";
+import { cosmeticItemRepository } from "@/infrastructure/repositories/cosmetic-item.repository";
 import { getLeagueProgress } from "@/domain/services/league-progress.service";
 import { resolveFrameTier, resolveNextFrameTier } from "@/domain/services/profile-decoration.service";
 import { calculateWinRate } from "@/domain/services/win-rate.util";
@@ -10,16 +12,25 @@ export async function getMyProfile(userId: string) {
   const profile = await playerProfileRepository.findByUserId(userId);
   if (!profile) throw new AppError("NOT_FOUND", "プロフィールが見つかりません。");
 
-  const leagues = await leagueRepository.findAllActive();
+  const equippedIds = [profile.selectedBackgroundId, profile.selectedBadgeId].filter((id): id is string => Boolean(id));
+  const [leagues, trophies, equippedItems] = await Promise.all([
+    leagueRepository.findAllActive(),
+    leagueTrophyRepository.listForPlayer(profile.id),
+    equippedIds.length > 0 ? cosmeticItemRepository.findManyByIds(equippedIds) : Promise.resolve([]),
+  ]);
+
   const progress = getLeagueProgress(profile.totalPoints, leagues);
   const frame = resolveFrameTier(profile.totalPoints, FRAME_TIERS);
   const nextFrame = resolveNextFrameTier(profile.totalPoints, FRAME_TIERS);
   const winRate = calculateWinRate(profile.totalWins, profile.totalMatches);
+  const background = equippedItems.find((item) => item.id === profile.selectedBackgroundId) ?? null;
+  const badge = equippedItems.find((item) => item.id === profile.selectedBadgeId) ?? null;
 
   return {
     id: profile.id,
     displayName: profile.displayName,
     totalPoints: profile.totalPoints,
+    prizeCurrency: profile.prizeCurrency,
     totalMatches: profile.totalMatches,
     totalWins: profile.totalWins,
     totalLosses: profile.totalLosses,
@@ -31,6 +42,8 @@ export async function getMyProfile(userId: string) {
     finalsReached: profile.finalsReached,
     selectedTitleId: profile.selectedTitleId,
     selectedFrameId: profile.selectedFrameId,
+    selectedBackgroundId: profile.selectedBackgroundId,
+    selectedBadgeId: profile.selectedBadgeId,
     showBotTag: profile.showBotTag,
     reducedMotion: profile.reducedMotion,
     soundEnabled: profile.soundEnabled,
@@ -43,6 +56,15 @@ export async function getMyProfile(userId: string) {
       progressRatio: progress.progressRatio,
     },
     frame: { current: frame, next: nextFrame },
+    background: background ? { assetKey: background.assetKey, name: background.name } : null,
+    badge: badge ? { assetKey: badge.assetKey, name: badge.name } : null,
+    trophies: trophies.map((t) => ({
+      leagueId: t.leagueId,
+      leagueName: t.league.displayName,
+      leagueThemeKey: t.league.themeKey,
+      count: t.count,
+      firstWonAt: t.firstWonAt,
+    })),
   };
 }
 

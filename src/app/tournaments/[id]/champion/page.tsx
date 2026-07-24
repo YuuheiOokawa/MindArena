@@ -8,19 +8,24 @@ import { LoadingState } from "@/components/common/loading-state";
 import { ErrorState } from "@/components/common/error-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ConfettiBurst } from "@/components/common/confetti-burst";
 import { AnimatedNumber } from "@/components/common/animated-number";
-import { Crown } from "lucide-react";
+import { Crown, Coins, Trophy } from "lucide-react";
 import type { ReactNode } from "react";
 
 interface TournamentView {
+  leagueId: string;
   leagueName: string;
+  championPrize: number;
 }
 
 interface ProfileView {
   totalPoints: number;
+  prizeCurrency: number;
   tournamentWins: number;
   frame: { current: { name: string } };
+  trophies: { leagueId: string; count: number }[];
 }
 
 export default function ChampionPage({ params }: { params: Promise<{ id: string }> }) {
@@ -44,6 +49,8 @@ export default function ChampionPage({ params }: { params: Promise<{ id: string 
   if (error) return <AppScreen><ErrorState message={error} /></AppScreen>;
   if (!tournament || !profile) return <AppScreen><LoadingState /></AppScreen>;
 
+  const trophyCount = profile.trophies.find((t) => t.leagueId === tournament.leagueId)?.count ?? 1;
+
   return (
     <AppScreen>
       <div className="relative flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
@@ -59,17 +66,37 @@ export default function ChampionPage({ params }: { params: Promise<{ id: string 
           <p className="mt-1 text-sm text-arena-silver">{tournament.leagueName}</p>
         </div>
 
+        <div className="arena-pop-in flex items-center gap-3" style={{ animationDelay: "0.2s" }}>
+          <Badge>
+            <Trophy className="h-3.5 w-3.5 text-arena-gold" />
+            トロフィー獲得{trophyCount > 1 ? `（${trophyCount}回目）` : ""}
+          </Badge>
+        </div>
+
         <Card className="w-full arena-pop-in" style={{ animationDelay: "0.25s" }}>
           <CardContent className="flex flex-col gap-3 py-4">
+            <Row
+              label="獲得賞金"
+              value={
+                <span className="flex items-center gap-1 text-arena-gold">
+                  <Coins className="h-4 w-4" />+<AnimatedNumber value={tournament.championPrize} />
+                </span>
+              }
+            />
             <Row label="保有ポイント" value={<AnimatedNumber value={profile.totalPoints} />} />
             <Row label="優勝回数" value={<><AnimatedNumber value={profile.tournamentWins} />回</>} />
             <Row label="解放中のフレーム" value={profile.frame.current.name} />
           </CardContent>
         </Card>
 
-        <Button asChild>
-          <Link href="/home">ホームへ戻る</Link>
-        </Button>
+        <div className="flex w-full flex-col gap-2">
+          <Button asChild variant="gold">
+            <Link href="/shop">ショップへ行く</Link>
+          </Button>
+          <Button asChild variant="secondary">
+            <Link href="/home">ホームへ戻る</Link>
+          </Button>
+        </div>
       </div>
     </AppScreen>
   );

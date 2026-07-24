@@ -11,6 +11,7 @@ import { hashStringToSeed } from "@/lib/utils/seeded-random";
 import { MatchStatus, ParticipantStatus, ParticipantType, PointReason, TournamentStatus } from "@/domain/enums";
 import { ROUND_CLEAR_REASON } from "@/config/round-rewards";
 import { DEFAULT_GAME_TIMERS } from "@/config/timers";
+import { BASE_CHAMPION_PRIZE } from "@/config/points";
 import type { BotPlayer, GameContext, GameResult } from "@/domain/interfaces/psychological-game";
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 
@@ -159,6 +160,10 @@ export async function finalizeMatchResult(
     if (winner.type === ParticipantType.HUMAN && winner.playerId) {
       const reason = isFinal ? PointReason.CHAMPION : ROUND_CLEAR_REASON[match.round];
       await rewardAndUpdateStats(tx, winner.playerId, reason, match.tournament.id, league, true, match.gameTypeId, isFinal);
+      if (isFinal) {
+        await awardChampionPrize(tx, winner.playerId, league.rewardMultiplier);
+        await awardLeagueTrophy(tx, winner.playerId, league.id);
+      }
     }
 
     if (isFinal && loser.type === ParticipantType.HUMAN && loser.playerId) {
@@ -206,6 +211,24 @@ async function rewardAndUpdateStats(
     leagueId: league.id,
   });
   await updateStatsOnly(tx, playerProfileId, won, gameTypeId, isChampion);
+}
+
+/** 賞金 (prizeCurrency): a spendable shop wallet, separate from the points ladder that drives league placement. */
+async function awardChampionPrize(tx: Tx, playerProfileId: string, rewardMultiplier: number) {
+  const amount = Math.round(BASE_CHAMPION_PRIZE * rewardMultiplier);
+  await tx.playerProfile.update({
+    where: { id: playerProfileId },
+    data: { prizeCurrency: { increment: amount } },
+  });
+}
+
+/** Upserts the player's trophy for this league — first win creates it, every repeat win increments `count`. */
+async function awardLeagueTrophy(tx: Tx, playerProfileId: string, leagueId: string) {
+  await tx.leagueTrophy.upsert({
+    where: { playerProfileId_leagueId: { playerProfileId, leagueId } },
+    update: { count: { increment: 1 } },
+    create: { playerProfileId, leagueId, count: 1 },
+  });
 }
 
 async function updateStatsOnly(tx: Tx, playerProfileId: string, won: boolean, gameTypeId: string, isChampion = false) {

@@ -2,14 +2,19 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/infrastructure/auth/auth";
 import { getMyAchievements, getMyGameStats, getMyProfile } from "@/features/profiles/profile.service";
+import { listLeaguesWithUnlockStatus } from "@/features/leagues/league.service";
 import { AppScreen } from "@/components/layout/app-screen";
 import { StatTile } from "@/components/common/stat-tile";
 import { EmptyState } from "@/components/common/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Settings, Sparkles, Trophy, Users } from "lucide-react";
+import { BookOpen, Coins, Flame, Gem, Settings, ShoppingBag, Skull, Sparkles, Star, Trophy, Users } from "lucide-react";
 import { TITLES } from "@/config/titles";
+import { BACKGROUND_GRADIENTS, BADGE_ICON_KEYS } from "@/config/shop-items";
+import { cn } from "@/lib/utils/cn";
 import type { LucideIcon } from "lucide-react";
+
+const BADGE_ICONS: Record<string, LucideIcon> = { Flame, Star, Skull, Gem };
 
 function ProfileLinkRow({ href, icon: Icon, label }: { href: string; icon: LucideIcon; label: string }) {
   return (
@@ -30,13 +35,17 @@ export default async function ProfilePage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const [profile, gameStats, achievements] = await Promise.all([
-    getMyProfile(session.user.id),
+  const profile = await getMyProfile(session.user.id);
+  const [gameStats, achievements, leagues] = await Promise.all([
     getMyGameStats(session.user.id),
     getMyAchievements(session.user.id),
+    listLeaguesWithUnlockStatus(profile.totalPoints),
   ]);
 
   const title = TITLES.find((t) => t.id === profile.selectedTitleId) ?? TITLES[0];
+  const trophyByLeague = new Map(profile.trophies.map((t) => [t.leagueId, t]));
+  const backgroundGradient = profile.background ? BACKGROUND_GRADIENTS[profile.background.assetKey] : null;
+  const BadgeIcon = profile.badge ? BADGE_ICONS[BADGE_ICON_KEYS[profile.badge.assetKey]] : null;
 
   return (
     <AppScreen nav>
@@ -48,10 +57,22 @@ export default async function ProfilePage() {
           </Link>
         </header>
 
-        <Card className="border-arena-primary/30 bg-gradient-to-b from-arena-primary/10 to-transparent">
+        <Card
+          className={cn(
+            "overflow-hidden border-arena-primary/30 bg-gradient-to-b to-transparent",
+            backgroundGradient ?? "from-arena-primary/10",
+          )}
+        >
           <CardContent className="flex flex-col items-center gap-2 py-6 text-center">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-arena-primary bg-arena-surface-2 text-2xl font-bold text-arena-primary-soft">
-              {profile.displayName.slice(0, 1).toUpperCase()}
+            <div className="relative">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-arena-primary bg-arena-surface-2 text-2xl font-bold text-arena-primary-soft">
+                {profile.displayName.slice(0, 1).toUpperCase()}
+              </div>
+              {BadgeIcon && (
+                <div className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-arena-surface bg-arena-gold/20">
+                  <BadgeIcon className="h-3.5 w-3.5 text-arena-gold" />
+                </div>
+              )}
             </div>
             <p className="text-lg font-bold text-arena-white">{profile.displayName}</p>
             <Badge variant="gold">{title.name}</Badge>
@@ -62,14 +83,55 @@ export default async function ProfilePage() {
                 {profile.frame.current.name}
               </Badge>
             </div>
-            <p className="text-2xl font-bold tabular-nums text-arena-gold">{profile.totalPoints.toLocaleString()} pt</p>
+            <div className="mt-1 flex items-center gap-4">
+              <div className="text-center">
+                <p className="text-2xl font-bold tabular-nums text-arena-gold">{profile.totalPoints.toLocaleString()}</p>
+                <p className="text-[10px] text-arena-silver/60">ポイント</p>
+              </div>
+              <div className="h-8 w-px bg-arena-border" />
+              <div className="text-center">
+                <p className="flex items-center justify-center gap-1 text-2xl font-bold tabular-nums text-arena-gold">
+                  <Coins className="h-4 w-4" />
+                  {profile.prizeCurrency.toLocaleString()}
+                </p>
+                <p className="text-[10px] text-arena-silver/60">賞金</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         <div className="flex flex-col gap-2">
+          <ProfileLinkRow href="/shop" icon={ShoppingBag} label="ショップ" />
           <ProfileLinkRow href="/friends" icon={Users} label="フレンド" />
           <ProfileLinkRow href="/how-to-play" icon={BookOpen} label="遊び方" />
         </div>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="text-sm font-semibold text-arena-silver">トロフィーケース</h2>
+          <div className="grid grid-cols-5 gap-2">
+            {leagues.map((league) => {
+              const trophy = trophyByLeague.get(league.id);
+              return (
+                <div
+                  key={league.id}
+                  title={league.displayName}
+                  className={cn(
+                    "relative flex flex-col items-center gap-1 rounded-xl border py-2.5",
+                    trophy ? "border-arena-gold/40 bg-arena-gold/10" : "border-arena-border bg-arena-surface-2/40",
+                  )}
+                >
+                  <Trophy className={cn("h-5 w-5", trophy ? "text-arena-gold" : "text-arena-silver/25")} />
+                  <span className="max-w-full truncate px-1 text-[9px] text-arena-silver/70">{league.displayName.replace("リーグ", "")}</span>
+                  {trophy && trophy.count > 1 && (
+                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-arena-gold px-1 text-[9px] font-bold text-arena-bg">
+                      {trophy.count}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
 
         <div className="grid grid-cols-3 gap-2">
           <StatTile label="総対戦数" value={profile.totalMatches} />

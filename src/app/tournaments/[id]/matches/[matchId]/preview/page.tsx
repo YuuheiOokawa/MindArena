@@ -37,6 +37,12 @@ interface MatchPreview {
 
 export default function PreMatchPage({ params }: { params: Promise<{ id: string; matchId: string }> }) {
   const { id, matchId } = use(params);
+  // Keyed on matchId so navigating straight from one match's preview to the next never renders a
+  // stale flash of the previous match's opponent/game while the new fetch is in flight.
+  return <PreMatchSession key={matchId} id={id} matchId={matchId} />;
+}
+
+function PreMatchSession({ id, matchId }: { id: string; matchId: string }) {
   const router = useRouter();
   const [preview, setPreview] = useState<MatchPreview | null>(null);
   const [error, setError] = useState<string | null>(null);

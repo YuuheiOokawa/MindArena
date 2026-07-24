@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { apiClient, ApiClientError } from "@/lib/api-client";
 import { AppScreen } from "@/components/layout/app-screen";
 import { FocusHeader } from "@/components/layout/focus-header";
@@ -10,8 +10,9 @@ import { ErrorState } from "@/components/common/error-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfettiBurst } from "@/components/common/confetti-burst";
 import { cn } from "@/lib/utils/cn";
-import { Bot, Crown, Swords } from "lucide-react";
+import { Bot, Crown, Swords, ChevronsUp } from "lucide-react";
 
 const ROUND_LABELS: Record<number, string> = {
   1: "1回戦",
@@ -64,9 +65,13 @@ function Avatar({ participant }: { participant: MatchView["player1"] }) {
 export default function BracketPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [view, setView] = useState<TournamentView | null>(null);
   const [selectedRound, setSelectedRound] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Set once from the URL on first render (never re-derived from a later searchParams change —
+  // dismissing clears the query param via router.replace, which must not resurrect this).
+  const [showAdvance, setShowAdvance] = useState(() => searchParams.get("advanced") === "1");
 
   useEffect(() => {
     let cancelled = false;
@@ -93,6 +98,37 @@ export default function BracketPage({ params }: { params: Promise<{ id: string }
 
   if (error) return <AppScreen nav header={<FocusHeader title="対戦表" backHref="/home" />}><ErrorState message={error} /></AppScreen>;
   if (!view) return <AppScreen nav header={<FocusHeader title="対戦表" backHref="/home" />}><LoadingState /></AppScreen>;
+
+  if (showAdvance) {
+    const clearedRound = ROUND_LABELS[view.currentRound - 1] ?? `第${view.currentRound - 1}ラウンド`;
+    return (
+      <AppScreen nav header={<FocusHeader title={view.leagueName} backHref="/home" />}>
+        <div className="relative flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
+          <ConfettiBurst count={24} />
+          <div
+            className="arena-pop-in arena-glow-pulse flex h-20 w-20 items-center justify-center rounded-full border-2 border-arena-primary bg-arena-primary/10"
+            style={{ "--arena-glow-color": "rgba(139, 92, 246, 0.6)" } as React.CSSProperties}
+          >
+            <ChevronsUp className="h-9 w-9 text-arena-primary-soft" />
+          </div>
+          <div className="arena-pop-in" style={{ animationDelay: "0.15s" }}>
+            <p className="text-2xl font-black tracking-wide text-arena-primary-soft">勝ち上がり！</p>
+            <p className="mt-1 text-sm text-arena-silver">{clearedRound}を突破しました</p>
+          </div>
+          <Button
+            className="arena-pop-in w-full"
+            style={{ animationDelay: "0.25s" }}
+            onClick={() => {
+              setShowAdvance(false);
+              router.replace(`/tournaments/${id}/bracket`);
+            }}
+          >
+            対戦表を見る
+          </Button>
+        </div>
+      </AppScreen>
+    );
+  }
 
   const activeRound = view.rounds.find((r) => r.round === selectedRound) ?? view.rounds[view.rounds.length - 1];
   const currentRoundData = view.rounds.find((r) => r.round === view.currentRound);

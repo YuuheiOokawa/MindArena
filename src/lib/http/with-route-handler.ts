@@ -58,9 +58,12 @@ function statusForCode(code: string): number {
     case "DUPLICATE_ACTION":
     case "ALREADY_FRIENDS":
     case "FRIEND_REQUEST_EXISTS":
+    case "ALREADY_OWNED":
       return 409;
     case "TOURNAMENT_NOT_JOINABLE":
     case "MATCH_NOT_READY":
+    case "INSUFFICIENT_FUNDS":
+    case "ITEM_NOT_OWNED":
       return 422;
     default:
       return 500;

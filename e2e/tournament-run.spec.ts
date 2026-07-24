@@ -85,6 +85,12 @@ test("demo user joins a tournament, plays through, and becomes champion", async 
     if (page.url().includes("/champion")) break;
 
     if (page.url().includes("/bracket")) {
+      // Right after a win, /bracket?advanced=1 shows a "勝ち上がり！" celebration in place of the
+      // normal bracket content — dismiss it before looking for the next match's advance button.
+      const dismissAdvance = page.getByRole("button", { name: "対戦表を見る" });
+      if (await dismissAdvance.isVisible().catch(() => false)) {
+        await dismissAdvance.click();
+      }
       const advance = page.getByRole("button", { name: "対戦へ進む" });
       await advance.waitFor({ state: "visible", timeout: 15000 });
       await advance.click();
