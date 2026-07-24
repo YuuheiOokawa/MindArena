@@ -7,8 +7,8 @@ import type { ReactNode } from "react";
  */
 export function MobileShell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-dvh justify-center bg-arena-bg">
-      <div className="relative flex min-h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-arena-bg pt-[env(safe-area-inset-top)]">
+    <div className="arena-ambient-bg flex min-h-dvh justify-center">
+      <div className="relative flex min-h-dvh w-full max-w-[430px] flex-col overflow-hidden pt-[env(safe-area-inset-top)]">
         {children}
       </div>
     </div>

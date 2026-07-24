@@ -9,6 +9,7 @@ import { LoadingState } from "@/components/common/loading-state";
 import { ErrorState } from "@/components/common/error-state";
 import { GameBoard } from "@/components/game/game-board";
 import { RoundTimer } from "@/components/game/round-timer";
+import { RoundHistoryStrip } from "@/components/game/round-history-strip";
 import { DEFAULT_GAME_TIMERS } from "@/config/timers";
 
 interface RawState {
@@ -17,6 +18,7 @@ interface RawState {
   totalRounds: number;
   status: "IN_PROGRESS" | "AWAITING_TIEBREAK" | "COMPLETE";
   scores: Record<string, number>;
+  history: { round: number; outcome?: Record<string, number> }[];
   [key: string]: unknown;
 }
 
@@ -120,6 +122,13 @@ export default function GamePlayPage({ params }: { params: Promise<{ id: string;
           <p className="text-xs text-arena-silver">VS</p>
           <ScoreBlock label="相手" value={oppScore} />
         </div>
+
+        {opponentId && (
+          <div>
+            <p className="mb-1.5 text-[11px] font-medium text-arena-silver/70">これまでの履歴</p>
+            <RoundHistoryStrip totalRounds={state.totalRounds} history={state.history ?? []} myId={myParticipantId} opponentId={opponentId} />
+          </div>
+        )}
 
         {opponentId && (
           <GameBoard state={state} myId={myParticipantId} opponentId={opponentId} submitting={submitting} onSubmit={handleSubmit} />

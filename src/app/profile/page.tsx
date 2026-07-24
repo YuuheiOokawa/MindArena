@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Settings, Sparkles, Trophy } from "lucide-react";
+import { TITLES } from "@/config/titles";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -19,6 +20,8 @@ export default async function ProfilePage() {
     getMyAchievements(session.user.id),
   ]);
 
+  const title = TITLES.find((t) => t.id === profile.selectedTitleId) ?? TITLES[0];
+
   return (
     <AppScreen nav>
       <div className="flex flex-col gap-5 px-4 pb-8 pt-6">
@@ -29,14 +32,15 @@ export default async function ProfilePage() {
           </Link>
         </header>
 
-        <Card className="border-arena-gold/30 bg-gradient-to-b from-arena-gold/10 to-transparent">
+        <Card className="border-arena-primary/30 bg-gradient-to-b from-arena-primary/10 to-transparent">
           <CardContent className="flex flex-col items-center gap-2 py-6 text-center">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-arena-gold bg-arena-surface-2 text-2xl font-bold text-arena-gold">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-arena-primary bg-arena-surface-2 text-2xl font-bold text-arena-primary-soft">
               {profile.displayName.slice(0, 1).toUpperCase()}
             </div>
             <p className="text-lg font-bold text-arena-white">{profile.displayName}</p>
+            <Badge variant="gold">{title.name}</Badge>
             <div className="flex items-center gap-2">
-              <Badge variant="gold">{profile.league.current.displayName}</Badge>
+              <Badge variant="primary">{profile.league.current.displayName}</Badge>
               <Badge variant="neutral">
                 <Sparkles className="mr-1 h-3 w-3" />
                 {profile.frame.current.name}

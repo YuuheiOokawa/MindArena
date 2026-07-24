@@ -31,7 +31,7 @@ export default function ForgotPasswordPage() {
       <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
         <p className="text-lg font-semibold text-arena-white">メールを確認してください</p>
         <p className="text-sm text-arena-silver">パスワード再設定の案内をお送りしました（開発環境では実際には送信されません）。</p>
-        <Link href="/login" className="mt-4 text-sm font-semibold text-arena-gold">
+        <Link href="/login" className="mt-4 text-sm font-semibold text-arena-primary-soft">
           ログイン画面に戻る
         </Link>
       </div>
@@ -54,7 +54,7 @@ export default function ForgotPasswordPage() {
         </Button>
       </form>
 
-      <Link href="/login" className="mt-6 text-center text-sm text-arena-silver hover:text-arena-gold">
+      <Link href="/login" className="mt-6 text-center text-sm text-arena-silver hover:text-arena-primary-soft">
         ログイン画面に戻る
       </Link>
     </div>

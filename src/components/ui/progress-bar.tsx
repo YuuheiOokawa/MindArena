@@ -5,7 +5,7 @@ export function ProgressBar({ value, className }: { value: number; className?: s
   return (
     <div className={cn("h-2 w-full overflow-hidden rounded-full bg-arena-surface-2", className)}>
       <div
-        className="h-full rounded-full bg-gradient-to-r from-arena-gold/70 to-arena-gold transition-[width] duration-500"
+        className="h-full rounded-full bg-gradient-to-r from-arena-primary-dark via-arena-primary to-arena-primary-soft transition-[width] duration-500"
         style={{ width: `${clamped}%` }}
       />
     </div>

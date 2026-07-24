@@ -11,7 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
-import { Bot, Crown } from "lucide-react";
+import { Bot, Crown, Swords } from "lucide-react";
 
 const ROUND_LABELS: Record<number, string> = {
   1: "1回戦",
@@ -39,6 +39,26 @@ interface TournamentView {
   myParticipantId: string | null;
   winnerParticipantId: string | null;
   rounds: { round: number; matches: MatchView[] }[];
+}
+
+function Avatar({ participant }: { participant: MatchView["player1"] }) {
+  if (!participant) {
+    return (
+      <div className="flex h-11 w-11 items-center justify-center rounded-full border border-dashed border-arena-border text-arena-silver/40">
+        ?
+      </div>
+    );
+  }
+  return (
+    <div className="relative flex h-11 w-11 items-center justify-center rounded-full border-2 border-arena-primary/40 bg-arena-surface-2 text-sm font-bold text-arena-primary-soft">
+      {participant.name.slice(0, 1)}
+      {participant.isBot && (
+        <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-arena-surface-2 ring-2 ring-arena-surface">
+          <Bot className="h-2.5 w-2.5 text-arena-silver" />
+        </span>
+      )}
+    </div>
+  );
 }
 
 export default function BracketPage({ params }: { params: Promise<{ id: string }> }) {
@@ -75,7 +95,8 @@ export default function BracketPage({ params }: { params: Promise<{ id: string }
   if (!view) return <AppScreen nav header={<FocusHeader title="対戦表" backHref="/home" />}><LoadingState /></AppScreen>;
 
   const activeRound = view.rounds.find((r) => r.round === selectedRound) ?? view.rounds[view.rounds.length - 1];
-  const myMatch = activeRound?.matches.find((m) => m.involvesMe);
+  const currentRoundData = view.rounds.find((r) => r.round === view.currentRound);
+  const myMatch = currentRoundData?.matches.find((m) => m.involvesMe);
   const myMatchPlayable = myMatch && (myMatch.status === "READY" || myMatch.status === "IN_PROGRESS");
 
   return (
@@ -83,7 +104,7 @@ export default function BracketPage({ params }: { params: Promise<{ id: string }
       <div className="flex flex-col gap-4 px-4 pb-8 pt-4">
         <div className="flex items-center justify-between">
           <p className="text-xs text-arena-silver">現在のラウンド</p>
-          <Badge variant="gold">{ROUND_LABELS[view.currentRound] ?? `第${view.currentRound}ラウンド`}</Badge>
+          <Badge variant="primary">{ROUND_LABELS[view.currentRound] ?? `第${view.currentRound}ラウンド`}</Badge>
         </div>
 
         <div className="no-scrollbar flex gap-2 overflow-x-auto">
@@ -94,7 +115,7 @@ export default function BracketPage({ params }: { params: Promise<{ id: string }
               className={cn(
                 "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
                 r.round === (selectedRound ?? view.currentRound)
-                  ? "border-arena-gold bg-arena-gold/15 text-arena-gold"
+                  ? "border-arena-primary bg-arena-primary/15 text-arena-primary-soft"
                   : "border-arena-border text-arena-silver hover:border-arena-silver/40",
               )}
             >
@@ -103,14 +124,39 @@ export default function BracketPage({ params }: { params: Promise<{ id: string }
           ))}
         </div>
 
-        {myMatchPlayable && (
-          <Button onClick={() => router.push(`/tournaments/${id}/matches/${myMatch!.id}/preview`)}>次の対戦へ進む</Button>
+        {myMatch && (
+          <Card className="border-arena-primary/40 bg-gradient-to-b from-arena-primary/10 to-transparent">
+            <CardContent className="flex flex-col gap-3 py-4">
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-arena-primary-soft">
+                <Swords className="h-3.5 w-3.5" />
+                次の対戦・第{myMatch.matchNumber}試合
+              </p>
+              <div className="flex items-center justify-around">
+                <div className="flex flex-col items-center gap-1">
+                  <Avatar participant={myMatch.player1} />
+                  <span className="max-w-20 truncate text-xs text-arena-silver">{myMatch.player1?.name ?? "未対戦"}</span>
+                </div>
+                <span className="text-xs font-bold text-arena-silver/60">VS</span>
+                <div className="flex flex-col items-center gap-1">
+                  <Avatar participant={myMatch.player2} />
+                  <span className="max-w-20 truncate text-xs text-arena-silver">{myMatch.player2?.name ?? "未対戦"}</span>
+                </div>
+              </div>
+              {myMatchPlayable && (
+                <Button onClick={() => router.push(`/tournaments/${id}/matches/${myMatch.id}/preview`)}>対戦へ進む</Button>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         <div className="flex flex-col gap-2">
           {activeRound?.matches.map((match) => (
-            <Card key={match.id} className={match.involvesMe ? "border-arena-gold/50" : ""}>
+            <Card key={match.id} className={match.involvesMe ? "border-arena-primary/50" : ""}>
               <CardContent className="flex flex-col gap-2 py-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-arena-silver/50">第{match.matchNumber}試合</span>
+                  {match.involvesMe && <Badge variant="primary">あなた</Badge>}
+                </div>
                 <ParticipantRow participant={match.player1} winnerId={match.winnerParticipantId} status={match.status} />
                 <div className="h-px bg-arena-border" />
                 <ParticipantRow participant={match.player2} winnerId={match.winnerParticipantId} status={match.status} />

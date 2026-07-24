@@ -11,8 +11,9 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Megaphone, Trophy } from "lucide-react";
+import { Bell, Bot, Coins, Mail, Megaphone, Swords, Trophy } from "lucide-react";
 import { resumeHref } from "@/features/tournaments/resume-href";
+import { APP_CONFIG } from "@/config/app";
 
 export default async function HomePage() {
   const session = await auth();
@@ -30,36 +31,64 @@ export default async function HomePage() {
 
   return (
     <AppScreen nav>
-      <div className="flex flex-col gap-5 px-4 pb-8 pt-6">
+      <div className="flex flex-col gap-5 px-4 pb-8 pt-5">
         <header className="flex items-center justify-between">
-          <div>
-            <p className="text-xs text-arena-silver">ようこそ</p>
-            <h1 className="text-lg font-bold text-arena-white">{profile.displayName}</h1>
+          <div className="flex items-center gap-1.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-arena-primary/40 bg-arena-primary/15">
+              <span className="text-xs font-bold text-arena-primary-soft">M</span>
+            </div>
+            <span className="text-sm font-bold tracking-wide text-arena-white">{APP_CONFIG.title}</span>
           </div>
-          <Badge variant="gold">{profile.league.current.displayName}</Badge>
+          <div className="flex items-center gap-1">
+            <button className="flex h-9 w-9 items-center justify-center rounded-full text-arena-silver/80 hover:text-arena-white">
+              <Bell className="h-4 w-4" />
+            </button>
+            <button className="flex h-9 w-9 items-center justify-center rounded-full text-arena-silver/80 hover:text-arena-white">
+              <Mail className="h-4 w-4" />
+            </button>
+          </div>
         </header>
 
-        <Card>
-          <CardContent className="flex flex-col gap-3">
-            <div className="flex items-end justify-between">
-              <div>
-                <p className="text-xs text-arena-silver">保有ポイント</p>
-                <p className="text-3xl font-bold tabular-nums text-arena-gold">{profile.totalPoints.toLocaleString()}</p>
+        <Card className="border-arena-primary/25">
+          <CardContent className="flex flex-col gap-3 py-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 border-arena-primary/50 bg-arena-surface-2 text-lg font-bold text-arena-primary-soft">
+                {profile.displayName.slice(0, 1).toUpperCase()}
               </div>
-              {profile.league.next && (
-                <p className="text-right text-xs text-arena-silver">
-                  次のリーグまで
-                  <br />
-                  <span className="text-sm font-semibold text-arena-white">{profile.league.pointsToNext} pt</span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-base font-bold text-arena-white">{profile.displayName}</p>
+                <Badge variant="primary" className="mt-1">
+                  {profile.league.current.displayName}
+                </Badge>
+              </div>
+              <div className="text-right">
+                <p className="flex items-center justify-end gap-1 text-lg font-bold tabular-nums text-arena-gold">
+                  <Coins className="h-4 w-4" />
+                  {profile.totalPoints.toLocaleString()}
                 </p>
-              )}
+                <p className="text-[11px] text-arena-silver/70">保有ポイント</p>
+              </div>
             </div>
-            <ProgressBar value={profile.league.progressRatio * 100} />
-            <p className="text-[11px] text-arena-silver/70">
-              {profile.league.next ? `次のリーグ: ${profile.league.next.displayName}` : "最高リーグに到達しています"}
-            </p>
+
+            <div>
+              <div className="mb-1 flex items-center justify-between text-[11px] text-arena-silver/70">
+                <span>次のリーグまで</span>
+                {profile.league.next && <span className="font-semibold text-arena-white">{profile.league.pointsToNext} pt</span>}
+              </div>
+              <ProgressBar value={profile.league.progressRatio * 100} />
+              <p className="mt-1 text-[11px] text-arena-silver/60">
+                {profile.league.next ? `次のリーグ: ${profile.league.next.displayName}` : "最高リーグに到達しています"}
+              </p>
+            </div>
           </CardContent>
         </Card>
+
+        <Button asChild variant="gold" size="default">
+          <Link href={inTournament ? resumeHref(resume) : "/tournaments/join"} className="flex items-center justify-center gap-2">
+            <Trophy className="h-4 w-4" />
+            {inTournament ? "対戦を続ける" : "トーナメントに参加"}
+          </Link>
+        </Button>
 
         <div className="grid grid-cols-3 gap-2">
           <StatTile label="勝率" value={`${profile.winRate}%`} accent />
@@ -67,26 +96,34 @@ export default async function HomePage() {
           <StatTile label="優勝回数" value={profile.tournamentWins} />
         </div>
 
-        <Button asChild size="default">
-          <Link href={inTournament ? resumeHref(resume) : "/tournaments/join"}>
-            {inTournament ? "対戦を続ける" : "トーナメントに参加する"}
-          </Link>
-        </Button>
-
         <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-arena-silver">最近の対戦結果</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-arena-silver">最近の結果</h2>
+            <Link href="/history" className="text-xs text-arena-primary-soft">
+              すべて見る
+            </Link>
+          </div>
           {recent.length === 0 ? (
-            <EmptyState icon={Trophy} title="まだ対戦記録がありません" description="最初のトーナメントに参加してみましょう。" />
+            <EmptyState icon={Swords} title="まだ対戦記録がありません" description="最初のトーナメントに参加してみましょう。" />
           ) : (
             <div className="flex flex-col gap-2">
               {recent.map((match) => (
                 <Card key={match.matchId}>
-                  <CardContent className="flex items-center justify-between py-3">
-                    <div>
-                      <p className="text-sm font-medium text-arena-white">{match.gameName}</p>
-                      <p className="text-xs text-arena-silver">vs {match.opponentName}</p>
+                  <CardContent className="flex items-center gap-3 py-3">
+                    <div
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                        match.won ? "bg-arena-success/15 text-arena-success" : "bg-arena-danger/15 text-arena-danger"
+                      }`}
+                    >
+                      {match.won ? "WIN" : "LOSE"}
                     </div>
-                    <Badge variant={match.won ? "success" : "danger"}>{match.won ? "WIN" : "LOSE"}</Badge>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-arena-white">{match.gameName}</p>
+                      <p className="flex items-center gap-1 truncate text-xs text-arena-silver">
+                        {match.opponentIsBot && <Bot className="h-3 w-3 shrink-0" />}
+                        vs {match.opponentName}
+                      </p>
+                    </div>
                   </CardContent>
                 </Card>
               ))}

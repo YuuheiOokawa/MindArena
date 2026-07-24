@@ -38,12 +38,14 @@ export async function generateBracketForTournament(tournamentId: string) {
   const tournament = await tournamentRepository.findById(tournamentId);
   if (!tournament || tournament.status !== TournamentStatus.RECRUITING) return;
 
-  const gameType = await gameTypeRepository.pickRandomActive();
+  const gameTypes = await gameTypeRepository.findAllActive();
   const plans = generateBracket(
     participants.map((p) => ({ participantId: p.id, displayName: p.displayName })),
     hashStringToSeed(tournamentId),
   );
 
+  // Each match randomly picks its own game from the 4 available (source spec §9 header note:
+  // "トーナメントの各試合は4つのゲームからランダムで1つが選ばれる"), not one game per round.
   await tournamentMatchRepository.createMany(
     plans.map((plan) => ({
       tournamentId,
@@ -51,7 +53,7 @@ export async function generateBracketForTournament(tournamentId: string) {
       matchNumber: plan.matchNumber,
       player1ParticipantId: plan.participant1Id,
       player2ParticipantId: plan.participant2Id,
-      gameTypeId: gameType.id,
+      gameTypeId: gameTypes[Math.floor(Math.random() * gameTypes.length)].id,
     })),
   );
 
@@ -242,7 +244,7 @@ export async function tryAdvanceRound(tournamentId: string, completedRound: numb
 
   const nextRound = completedRound + 1;
   const plans = pairNextRound(nextRound, orderedWinners);
-  const gameType = await gameTypeRepository.pickRandomActive();
+  const gameTypes = await gameTypeRepository.findAllActive();
 
   await tournamentMatchRepository.createMany(
     plans.map((plan) => ({
@@ -251,7 +253,7 @@ export async function tryAdvanceRound(tournamentId: string, completedRound: numb
       matchNumber: plan.matchNumber,
       player1ParticipantId: plan.participant1Id,
       player2ParticipantId: plan.participant2Id,
-      gameTypeId: gameType.id,
+      gameTypeId: gameTypes[Math.floor(Math.random() * gameTypes.length)].id,
     })),
   );
 

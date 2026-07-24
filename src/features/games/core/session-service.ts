@@ -7,7 +7,8 @@ import { redactStateForParticipant } from "@/features/games/core/redaction";
 import { finalizeMatchResult } from "@/features/tournaments/progress.service";
 import { coinFlip } from "@/domain/services/tiebreak";
 import { DEFAULT_GAME_TIMERS } from "@/config/timers";
-import { MatchStatus, type ParticipantType } from "@/domain/enums";
+import { ROUND_CLEAR_REASON } from "@/config/round-rewards";
+import { MatchStatus, PointReason, type ParticipantType } from "@/domain/enums";
 import { AppError } from "@/lib/errors/app-error";
 import { isE2eTestMode } from "@/lib/e2e-test-mode";
 import { getE2eTestBotAction } from "@/features/games/core/e2e-test-mode-actions";
@@ -203,19 +204,36 @@ export async function getMatchResultForParticipant(matchId: string, participantI
   const result = await prisma.matchResult.findUnique({ where: { tournamentMatchId: matchId } });
   if (!result) throw new AppError("NOT_FOUND", "対戦結果がまだありません。");
 
+  const won = result.winnerParticipantId === participantId;
   const opponent = match.player1ParticipantId === participantId ? match.player2 : match.player1;
   const myScore = match.player1ParticipantId === participantId ? result.player1Score : result.player2Score;
   const opponentScore = match.player1ParticipantId === participantId ? result.player2Score : result.player1Score;
   const resultData = result.resultData as unknown as { rounds?: unknown[] } | null;
 
+  const me = match.player1ParticipantId === participantId ? match.player1 : match.player2;
+  const pointsEarned = won && me?.playerId ? await findAwardedPointsForRound(me.playerId, match.tournamentId, match.round) : 0;
+
   return {
     matchId,
-    won: result.winnerParticipantId === participantId,
+    won,
     myScore,
     opponentScore,
     opponentName: opponent?.displayName ?? "相手",
     rounds: resultData?.rounds ?? [],
     round: match.round,
     tournamentId: match.tournamentId,
+    pointsEarned,
   };
+}
+
+async function findAwardedPointsForRound(playerProfileId: string, tournamentId: string, round: number) {
+  const isFinal = round === 5;
+  const reason = isFinal ? PointReason.CHAMPION : ROUND_CLEAR_REASON[round];
+  if (!reason) return 0;
+
+  const transaction = await prisma.pointTransaction.findFirst({
+    where: { playerProfileId, tournamentId, reason },
+    orderBy: { createdAt: "desc" },
+  });
+  return transaction?.amount ?? 0;
 }

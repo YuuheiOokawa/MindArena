@@ -46,7 +46,7 @@ export function NumberBluffBoard({
               onClick={() => setNumber(n)}
               className={cn(
                 "flex h-11 items-center justify-center rounded-lg border text-sm font-semibold tabular-nums transition-colors",
-                number === n ? "border-arena-gold bg-arena-gold/15 text-arena-gold" : "border-arena-border text-arena-silver",
+                number === n ? "border-arena-primary bg-arena-primary/15 text-arena-primary-soft" : "border-arena-border text-arena-silver",
               )}
             >
               {n}
@@ -62,7 +62,7 @@ export function NumberBluffBoard({
               onClick={() => setDeclarationId(d.id)}
               className={cn(
                 "rounded-lg border px-3 py-2.5 text-left text-sm transition-colors",
-                declarationId === d.id ? "border-arena-gold bg-arena-gold/10 text-arena-white" : "border-arena-border text-arena-silver",
+                declarationId === d.id ? "border-arena-primary bg-arena-primary/10 text-arena-white" : "border-arena-border text-arena-silver",
               )}
             >
               {d.text}

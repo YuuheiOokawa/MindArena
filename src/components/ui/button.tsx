@@ -10,8 +10,10 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-arena-gold text-arena-bg shadow-[0_0_24px_-8px_rgba(212,175,106,0.6)] hover:brightness-105",
-        secondary: "bg-arena-surface-2 text-arena-white border border-arena-border hover:border-arena-gold/40",
+        primary:
+          "bg-gradient-to-b from-arena-primary-soft/90 to-arena-primary text-white shadow-[0_0_24px_-8px_rgba(139,92,246,0.7)] hover:brightness-105",
+        gold: "bg-gradient-to-b from-arena-gold-soft to-arena-gold text-arena-bg shadow-[0_0_24px_-8px_rgba(224,178,86,0.6)] hover:brightness-105",
+        secondary: "bg-arena-surface-2 text-arena-white border border-arena-border hover:border-arena-primary/40",
         ghost: "bg-transparent text-arena-silver hover:text-arena-white",
         danger: "bg-arena-danger/90 text-arena-white hover:bg-arena-danger",
       },

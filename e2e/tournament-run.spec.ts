@@ -46,7 +46,7 @@ test("demo user joins a tournament, plays through, and becomes champion", async 
   await page.getByRole("button", { name: "ログイン" }).click();
   await page.waitForURL("**/home", { timeout: 15000 });
 
-  await page.getByRole("link", { name: /トーナメントに参加する|対戦を続ける/ }).click();
+  await page.getByRole("link", { name: /トーナメントに参加|対戦を続ける/ }).click();
   await page.waitForURL(/\/tournaments\/(join|.+\/(bracket|matchmaking|preview|play))/, { timeout: 15000 });
 
   if (page.url().endsWith("/tournaments/join")) {
@@ -66,7 +66,7 @@ test("demo user joins a tournament, plays through, and becomes champion", async 
     if (page.url().includes("/champion")) break;
 
     if (page.url().includes("/bracket")) {
-      const advance = page.getByRole("button", { name: "次の対戦へ進む" });
+      const advance = page.getByRole("button", { name: "対戦へ進む" });
       await advance.waitFor({ state: "visible", timeout: 15000 });
       await advance.click();
     }

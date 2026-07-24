@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { resumeHref } from "@/features/tournaments/resume-href";
 import type { ResumeScreen } from "@/features/tournaments/resume";
-import { Trophy, XCircle } from "lucide-react";
+import { Coins, Trophy, XCircle } from "lucide-react";
 
 interface MatchResultView {
   won: boolean;
@@ -18,6 +18,7 @@ interface MatchResultView {
   opponentScore: number;
   opponentName: string;
   tournamentId: string;
+  pointsEarned: number;
 }
 
 export default function MatchResultPage({ params }: { params: Promise<{ id: string; matchId: string }> }) {
@@ -50,7 +51,15 @@ export default function MatchResultPage({ params }: { params: Promise<{ id: stri
   return (
     <AppScreen>
       <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
-        {result.won ? <Trophy className="h-14 w-14 text-arena-gold" /> : <XCircle className="h-14 w-14 text-arena-danger" />}
+        {result.won ? (
+          <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-arena-gold/60 bg-arena-gold/10 shadow-[0_0_32px_-8px_rgba(224,178,86,0.6)]">
+            <Trophy className="h-9 w-9 text-arena-gold" />
+          </div>
+        ) : (
+          <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-arena-danger/40 bg-arena-danger/10">
+            <XCircle className="h-9 w-9 text-arena-danger" />
+          </div>
+        )}
         <div>
           <p className={`text-3xl font-black tracking-wide ${result.won ? "text-arena-gold" : "text-arena-danger"}`}>
             {result.won ? "WIN" : "LOSE"}
@@ -59,15 +68,28 @@ export default function MatchResultPage({ params }: { params: Promise<{ id: stri
         </div>
 
         <Card className="w-full">
-          <CardContent className="flex items-center justify-around py-4">
-            <ScoreBlock label="あなた" value={result.myScore} />
-            <p className="text-arena-silver">-</p>
-            <ScoreBlock label="相手" value={result.opponentScore} />
+          <CardContent className="flex flex-col gap-3 py-4">
+            <div className="flex items-center justify-around">
+              <ScoreBlock label="あなた" value={result.myScore} />
+              <p className="text-arena-silver">-</p>
+              <ScoreBlock label="相手" value={result.opponentScore} />
+            </div>
+            {result.pointsEarned > 0 && (
+              <>
+                <div className="h-px bg-arena-border" />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-arena-silver">獲得ポイント</span>
+                  <span className="flex items-center gap-1 text-base font-bold tabular-nums text-arena-gold">
+                    <Coins className="h-4 w-4" />+{result.pointsEarned}P
+                  </span>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
         <div className="flex w-full flex-col gap-2">
-          <Button onClick={handleNext} disabled={navigating}>
+          <Button variant="gold" onClick={handleNext} disabled={navigating}>
             {navigating ? "移動中…" : "次へ進む"}
           </Button>
           <Button variant="secondary" onClick={() => router.push(`/tournaments/${id}/bracket`)}>

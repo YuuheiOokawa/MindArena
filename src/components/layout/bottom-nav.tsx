@@ -28,7 +28,7 @@ export function BottomNav() {
                 href={item.href}
                 className={cn(
                   "flex min-h-14 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors",
-                  active ? "text-arena-gold" : "text-arena-silver/70 hover:text-arena-silver",
+                  active ? "text-arena-primary-soft" : "text-arena-silver/70 hover:text-arena-silver",
                 )}
               >
                 <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 1.8} />

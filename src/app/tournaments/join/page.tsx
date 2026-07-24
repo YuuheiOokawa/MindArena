@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Lock, Users } from "lucide-react";
+import { Dices, Lock, Users } from "lucide-react";
 
 interface LeagueSummary {
   id: string;
@@ -153,9 +153,18 @@ function JoinConfirm({ leagueId }: { leagueId: string }) {
           </CardContent>
         </Card>
 
+        <Card className="border-arena-primary/20 bg-arena-primary/5">
+          <CardContent className="flex items-center gap-3 py-4">
+            <Dices className="h-5 w-5 text-arena-primary-soft" />
+            <p className="text-xs text-arena-silver">
+              各試合のゲームは、対戦開始前に4種類からランダムで1つ選ばれます。
+            </p>
+          </CardContent>
+        </Card>
+
         {error && <p className="text-sm text-arena-danger">{error}</p>}
 
-        <Button onClick={handleJoin} disabled={joining}>
+        <Button variant="gold" onClick={handleJoin} disabled={joining}>
           {joining ? "参加処理中…" : "トーナメントに参加する"}
         </Button>
       </div>

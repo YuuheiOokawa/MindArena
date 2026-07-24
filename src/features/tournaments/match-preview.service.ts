@@ -16,18 +16,26 @@ export async function getMatchPreview(userId: string, matchId: string) {
     },
   });
 
+  const me = match.player1?.id === myParticipantId ? match.player1 : match.player2;
   const opponent = match.player1?.id === myParticipantId ? match.player2 : match.player1;
-  if (!opponent) throw new AppError("MATCH_NOT_READY", "対戦相手がまだ決まっていません。");
+  if (!opponent || !me) throw new AppError("MATCH_NOT_READY", "対戦相手がまだ決まっていません。");
 
   const opponentWinRate = opponent.player ? calculateWinRate(opponent.player.totalWins, opponent.player.totalMatches) : null;
+  const myWinRate = me.player ? calculateWinRate(me.player.totalWins, me.player.totalMatches) : null;
 
   return {
     matchId: match.id,
     myParticipantId,
     round: match.round,
+    matchNumber: match.matchNumber,
     gameName: match.gameType.name,
     gameId: match.gameType.code.toLowerCase().replace(/_/g, "-"),
     tournamentLeagueName: match.tournament.league.displayName,
+    me: {
+      displayName: me.displayName,
+      leagueName: me.player?.currentLeague.displayName ?? null,
+      winRate: myWinRate,
+    },
     opponent: {
       participantId: opponent.id,
       displayName: opponent.displayName,

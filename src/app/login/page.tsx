@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Crown } from "lucide-react";
 import { loginSchema, type LoginInput } from "@/lib/validation/auth.schema";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -32,8 +33,13 @@ export default function LoginPage() {
 
   return (
     <div className="flex flex-1 flex-col px-6 pb-10 pt-16">
-      <h1 className="text-xl font-bold text-arena-white">{APP_CONFIG.title}</h1>
-      <p className="mt-1 text-sm text-arena-silver">ログインして対戦を続けよう。</p>
+      <div className="mb-6 flex flex-col items-center gap-2 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-arena-primary/40 bg-arena-primary/10">
+          <Crown className="h-7 w-7 text-arena-primary-soft" />
+        </div>
+        <h1 className="text-xl font-bold tracking-wide text-arena-white">{APP_CONFIG.title}</h1>
+        <p className="text-sm text-arena-silver">{APP_CONFIG.shortTagline}</p>
+      </div>
 
       <form className="mt-8 flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)} noValidate>
         <label className="flex flex-col gap-1.5">
@@ -49,7 +55,7 @@ export default function LoginPage() {
 
         {serverError && <p className="text-sm text-arena-danger">{serverError}</p>}
 
-        <Link href="/forgot-password" className="self-end text-xs text-arena-silver hover:text-arena-gold">
+        <Link href="/forgot-password" className="self-end text-xs text-arena-silver hover:text-arena-primary-soft">
           パスワードをお忘れですか？
         </Link>
 
@@ -64,7 +70,7 @@ export default function LoginPage() {
 
       <p className="mt-6 text-center text-sm text-arena-silver">
         アカウントをお持ちでないですか？{" "}
-        <Link href="/register" className="font-semibold text-arena-gold">
+        <Link href="/register" className="font-semibold text-arena-primary-soft">
           新規登録
         </Link>
       </p>

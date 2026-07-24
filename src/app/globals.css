@@ -1,16 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --color-arena-bg: #05070d;
-  --color-arena-surface: #0e1220;
-  --color-arena-surface-2: #161c2e;
-  --color-arena-border: #232a42;
-  --color-arena-silver: #c7ccd8;
-  --color-arena-white: #f5f6fa;
-  --color-arena-gold: #d4af6a;
-  --color-arena-gold-soft: #efe3c3;
-  --color-arena-danger: #c0524a;
-  --color-arena-success: #4d9d7c;
+  --color-arena-bg: #08060f;
+  --color-arena-surface: #120f20;
+  --color-arena-surface-2: #1b1732;
+  --color-arena-border: #2c2650;
+  --color-arena-silver: #b7b2d6;
+  --color-arena-white: #f5f4fb;
+  --color-arena-primary: #8b5cf6;
+  --color-arena-primary-soft: #c9b8ff;
+  --color-arena-primary-dark: #4c3a99;
+  --color-arena-gold: #e0b256;
+  --color-arena-gold-soft: #f3e2b8;
+  --color-arena-danger: #e0554f;
+  --color-arena-success: #4dbf8c;
 }
 
 @theme inline {
@@ -20,6 +23,9 @@
   --color-arena-border: var(--color-arena-border);
   --color-arena-silver: var(--color-arena-silver);
   --color-arena-white: var(--color-arena-white);
+  --color-arena-primary: var(--color-arena-primary);
+  --color-arena-primary-soft: var(--color-arena-primary-soft);
+  --color-arena-primary-dark: var(--color-arena-primary-dark);
   --color-arena-gold: var(--color-arena-gold);
   --color-arena-gold-soft: var(--color-arena-gold-soft);
   --color-arena-danger: var(--color-arena-danger);
@@ -39,6 +45,15 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
+}
+
+/* Subtle purple glow behind the app column, echoing the reference design's violet ambience
+   without overpowering legibility (source spec: keep dark themes readable, not flashy). */
+.arena-ambient-bg {
+  background:
+    radial-gradient(60% 40% at 50% 0%, rgba(139, 92, 246, 0.16), transparent 70%),
+    radial-gradient(50% 30% at 100% 100%, rgba(224, 178, 86, 0.05), transparent 70%),
+    var(--color-arena-bg);
 }
 
 * {
