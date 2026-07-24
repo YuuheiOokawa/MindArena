@@ -1,11 +1,6 @@
 import { ChoiceButton } from "./choice-button";
 import { WaitingBanner } from "./trust-or-betray-board";
-
-const MOVE_LABELS: Record<string, { label: string; description: string }> = {
-  STRIKE: { label: "攻撃", description: "見破るに勝つ" },
-  GUARD: { label: "防御", description: "攻撃に勝つ" },
-  READ: { label: "見破る", description: "防御に勝つ" },
-};
+import { FINAL_PREDICTION_MOVE_LABELS as MOVE_LABELS } from "@/config/games/final-prediction";
 
 export function FinalPredictionBoard({
   myId,

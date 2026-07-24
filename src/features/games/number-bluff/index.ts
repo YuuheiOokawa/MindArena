@@ -109,6 +109,7 @@ export const numberBluffGame: PsychologicalGame<NumberBluffState, NumberBluffAct
         {
           round: state.round,
           actions: { [idA]: declareA, [idB]: declareB },
+          responses: { [idA]: respondA, [idB]: respondB },
           outcome: { [idA]: scoreA, [idB]: scoreB },
         },
       ],

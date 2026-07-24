@@ -10,7 +10,15 @@ import { ErrorState } from "@/components/common/error-state";
 import { GameBoard } from "@/components/game/game-board";
 import { RoundTimer } from "@/components/game/round-timer";
 import { RoundHistoryStrip } from "@/components/game/round-history-strip";
+import { RoundReveal } from "@/components/game/round-reveal";
 import { DEFAULT_GAME_TIMERS } from "@/config/timers";
+
+interface RoundEntry {
+  round: number;
+  actions: Record<string, { actionData: Record<string, unknown> }>;
+  responses?: Record<string, { actionData: Record<string, unknown> }>;
+  outcome?: Record<string, number>;
+}
 
 interface RawState {
   gameId: string;
@@ -18,7 +26,7 @@ interface RawState {
   totalRounds: number;
   status: "IN_PROGRESS" | "AWAITING_TIEBREAK" | "COMPLETE";
   scores: Record<string, number>;
-  history: { round: number; outcome?: Record<string, number> }[];
+  history: RoundEntry[];
   [key: string]: unknown;
 }
 
@@ -31,7 +39,15 @@ export default function GamePlayPage({ params }: { params: Promise<{ id: string;
   const [state, setState] = useState<RawState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [revealEntry, setRevealEntry] = useState<RoundEntry | null>(null);
+  const [isFinalReveal, setIsFinalReveal] = useState(false);
   const navigatedRef = useRef(false);
+  const shownRoundsRef = useRef<Set<number>>(new Set());
+  // The background poll's setTimeout loop is created once and doesn't re-run per render, so it
+  // closes over stale `revealEntry`/`isFinalReveal` state forever — reading a ref instead (always
+  // current, unlike a closed-over value) is what stops it from auto-navigating to /result out
+  // from under a reveal the player hasn't dismissed yet.
+  const revealPendingRef = useRef(false);
 
   useEffect(() => {
     apiClient
@@ -43,28 +59,65 @@ export default function GamePlayPage({ params }: { params: Promise<{ id: string;
       .catch(() => undefined);
   }, [matchId]);
 
+  /**
+   * A round that just resolved (a new `history` entry) is held back from the board with a
+   * RoundReveal instead of silently jumping to the next round's buttons — otherwise a match is
+   * just "pick a button, watch the score change" with no feedback on what the opponent actually
+   * did. Navigation to /result on COMPLETE is deferred until the final round's reveal is
+   * dismissed (see handleRevealContinue), for the same reason.
+   */
+  function applyIncomingState(data: RawState, myId: string | null) {
+    setState(data);
+    if (data.gameId && myId) {
+      const ids = Object.keys(data.scores);
+      setOpponentId(ids.find((idCandidate) => idCandidate !== myId) ?? null);
+    }
+
+    const lastEntry = data.history?.[data.history.length - 1];
+    if (lastEntry && !shownRoundsRef.current.has(lastEntry.round)) {
+      shownRoundsRef.current.add(lastEntry.round);
+      revealPendingRef.current = true;
+      setIsFinalReveal(data.status === "COMPLETE");
+      setRevealEntry(lastEntry);
+      return;
+    }
+
+    if (data.status === "COMPLETE" && !navigatedRef.current && !revealPendingRef.current) {
+      navigatedRef.current = true;
+      router.push(`/tournaments/${id}/matches/${matchId}/result`);
+    }
+  }
+
+  function handleRevealContinue() {
+    revealPendingRef.current = false;
+    setRevealEntry(null);
+    if (isFinalReveal && !navigatedRef.current) {
+      navigatedRef.current = true;
+      router.push(`/tournaments/${id}/matches/${matchId}/result`);
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
 
     async function poll() {
       if (navigatedRef.current) return;
+      // While a reveal is up, the round (or the whole match) is already resolved — polling would
+      // just re-fetch the same state, and once the match is finalized server-side it 404s/409s
+      // instead, which would otherwise clobber the reveal with an error screen. Idle until the
+      // player dismisses it.
+      if (revealPendingRef.current) {
+        timer = setTimeout(poll, 1200);
+        return;
+      }
       try {
         const data = await apiClient.get<RawState>(`/api/matches/${matchId}/session`);
         if (cancelled || navigatedRef.current) return;
-        setState(data);
-        if (data.gameId && myParticipantId) {
-          const ids = Object.keys(data.scores);
-          setOpponentId(ids.find((idCandidate) => idCandidate !== myParticipantId) ?? null);
-        }
-        if (data.status === "COMPLETE" && !navigatedRef.current) {
-          navigatedRef.current = true;
-          router.push(`/tournaments/${id}/matches/${matchId}/result`);
-          return;
-        }
+        applyIncomingState(data, myParticipantId);
         timer = setTimeout(poll, 1200);
       } catch (e) {
-        if (!cancelled && !navigatedRef.current) {
+        if (!cancelled && !navigatedRef.current && !revealPendingRef.current) {
           setError(e instanceof ApiClientError ? e.message : "対戦状況の取得に失敗しました。");
         }
       }
@@ -88,11 +141,7 @@ export default function GamePlayPage({ params }: { params: Promise<{ id: string;
         actionType,
         actionData,
       });
-      setState(next);
-      if (next.status === "COMPLETE" && !navigatedRef.current) {
-        navigatedRef.current = true;
-        router.push(`/tournaments/${id}/matches/${matchId}/result`);
-      }
+      applyIncomingState(next, myParticipantId);
     } catch (e) {
       setError(e instanceof ApiClientError ? e.message : "選択の送信に失敗しました。");
     } finally {
@@ -114,7 +163,7 @@ export default function GamePlayPage({ params }: { params: Promise<{ id: string;
           <p className="text-xs text-arena-silver">
             ラウンド {Math.min(state.round, state.totalRounds)} / {state.totalRounds}
           </p>
-          <RoundTimer key={phaseKey} seconds={DEFAULT_GAME_TIMERS.choiceSeconds} />
+          {!revealEntry && <RoundTimer key={phaseKey} seconds={DEFAULT_GAME_TIMERS.choiceSeconds} />}
         </div>
 
         <div className="flex items-center justify-between rounded-xl border border-arena-border bg-arena-surface-2/60 px-4 py-3">
@@ -130,7 +179,18 @@ export default function GamePlayPage({ params }: { params: Promise<{ id: string;
           </div>
         )}
 
-        {opponentId && (
+        {opponentId && revealEntry && (
+          <RoundReveal
+            state={state}
+            entry={revealEntry}
+            myId={myParticipantId}
+            opponentId={opponentId}
+            isFinalRound={isFinalReveal}
+            onContinue={handleRevealContinue}
+          />
+        )}
+
+        {opponentId && !revealEntry && (
           <GameBoard state={state} myId={myParticipantId} opponentId={opponentId} submitting={submitting} onSubmit={handleSubmit} />
         )}
 

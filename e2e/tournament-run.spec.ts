@@ -21,6 +21,15 @@ async function playCurrentMatchToWin(page: Page) {
   for (let attempt = 0; attempt < 60; attempt++) {
     if (page.url().includes("/result")) return;
 
+    // Between rounds, GamePlayPage shows a RoundReveal ("次のラウンドへ" / "結果を見る") instead
+    // of the board — dismiss it before looking for any of the choice buttons below.
+    const revealContinue = page.getByRole("button", { name: /次のラウンドへ|結果を見る/ });
+    if (await revealContinue.isVisible().catch(() => false)) {
+      await clickIfPresent(revealContinue);
+      await page.waitForTimeout(600);
+      continue;
+    }
+
     const declareHeading = page.getByText("数字を選ぶ", { exact: false });
     const numberButton = page.getByRole("button", { name: "1", exact: true });
     const declarationOption = page.getByText("私の数字は5以上だ", { exact: false });

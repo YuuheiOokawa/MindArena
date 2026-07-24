@@ -27,8 +27,17 @@ export function TrustOrBetrayBoard({
 
 export function WaitingBanner() {
   return (
-    <div className="flex min-h-16 items-center justify-center rounded-xl border border-dashed border-arena-border text-sm text-arena-silver">
-      相手の選択を待っています…
+    <div className="flex min-h-16 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-arena-primary/30 bg-arena-primary/5 text-sm text-arena-silver">
+      <div className="flex items-center gap-1.5">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="h-2 w-2 animate-bounce rounded-full bg-arena-primary-soft"
+            style={{ animationDelay: `${i * 0.15}s` }}
+          />
+        ))}
+      </div>
+      相手が考え中…
     </div>
   );
 }
