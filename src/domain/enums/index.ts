@@ -69,6 +69,11 @@ export enum TimeoutPolicy {
   FORFEIT_ROUND = "FORFEIT_ROUND",
 }
 
+export enum FriendshipStatus {
+  PENDING = "PENDING",
+  ACCEPTED = "ACCEPTED",
+}
+
 export enum TournamentRound {
   ROUND_OF_32 = 1,
   ROUND_OF_16 = 2,

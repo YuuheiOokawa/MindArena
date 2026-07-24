@@ -35,4 +35,8 @@ export const apiClient = {
     });
     return unwrap<T>(res);
   },
+  async delete<T>(path: string): Promise<T> {
+    const res = await fetch(path, { method: "DELETE" });
+    return unwrap<T>(res);
+  },
 };

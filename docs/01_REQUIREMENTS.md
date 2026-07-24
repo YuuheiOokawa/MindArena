@@ -35,7 +35,7 @@ to ship something real and working, and marks what's deferred vs. what's a stub.
 | Password reset | UI entry point + Zod-validated form exists (`/forgot-password`) that accepts an email and shows a "check your inbox" confirmation; actual token/email delivery is a documented stub (`SendEmailService` interface with a console-log dev implementation). |
 | Demo account | Only seeded when `NODE_ENV !== "production"` (see `prisma/seed.ts`). |
 | Admin panel | Not built as UI in MVP, but every "manageable" entity (`League`, `GameType`, `BotProfile`, `Achievement`, `CosmeticItem`, `Announcement`) is a normal DB table read through a repository — no values are hardcoded in components — so an admin CRUD UI can be added later without touching game/tournament code. |
-| Friends/guild/chat/ranking/season/shop/etc. | Not implemented; see `15_FUTURE_ROADMAP.md` for how the current domain layer already leaves room for each. |
+| Guild/chat/ranking/season/shop/etc. | Not implemented; see `15_FUTURE_ROADMAP.md` for how the current domain layer already leaves room for each. Friends (request/accept/list/unfriend) is implemented — see `src/features/friends/`. |
 
 ## Definition of done for this MVP (mirrors source spec §34)
 

@@ -1,11 +1,16 @@
 # 15. Future Roadmap
 
-None of these are implemented in the MVP. Each row notes the seam already in place that makes
-adding it additive rather than a rewrite.
+None of these are implemented in the MVP (with one exception noted below). Each row notes the
+seam already in place that makes adding it additive rather than a rewrite.
+
+**Friends is now implemented** — see `src/features/friends/`, the `Friendship` model in
+`prisma/schema.prisma`, and the `/friends` screen. Scope: send/accept/decline/cancel a friend
+request by username, list friends, unfriend. Friend battles (challenging a friend directly to a
+match) are still a future extension — see the seam note below, unchanged.
 
 | Feature | Seam already in place |
 |---|---|
-| Friends / friend battles | `MatchChannel` abstraction + `TournamentParticipant` already models `HUMAN` opponents generically; a friend-challenge flow would create a 2-participant "tournament" using the same bracket/match/session machinery. |
+| Friend battles (challenge a specific friend) | `MatchChannel` abstraction + `TournamentParticipant` already models `HUMAN` opponents generically; a friend-challenge flow would create a 2-participant "tournament" using the same bracket/match/session machinery. The new `Friendship` table already identifies who is eligible to be challenged. |
 | Spectating | `GameSession.state` is already server-stored and redaction-on-read is the only game-specific rule; a read-only viewer route can reuse the same session repository with a different redaction policy. |
 | Ranking / leaderboards | `PlayerProfile.totalPoints` + `PlayerGameStats` already aggregate everything a leaderboard query needs; add a read-model/materialized view, no write-path changes. |
 | Seasons + demotion | `league-progress.service` is already a pure function of `(points, leagues)` rather than a one-way ratchet; a season-reset job and a demotion check are new callers of the same service, not new logic. |

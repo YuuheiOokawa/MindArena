@@ -9,6 +9,10 @@ export type AppErrorCode =
   | "SESSION_NOT_FOUND"
   | "DUPLICATE_ACTION"
   | "CONFLICT"
+  | "ALREADY_FRIENDS"
+  | "FRIEND_REQUEST_EXISTS"
+  | "FRIEND_REQUEST_NOT_FOUND"
+  | "CANNOT_FRIEND_SELF"
   | "INTERNAL_ERROR";
 
 const DEFAULT_MESSAGES: Record<AppErrorCode, string> = {
@@ -22,6 +26,10 @@ const DEFAULT_MESSAGES: Record<AppErrorCode, string> = {
   SESSION_NOT_FOUND: "対戦セッションが見つかりませんでした。",
   DUPLICATE_ACTION: "この選択はすでに送信されています。",
   CONFLICT: "処理が競合しました。もう一度お試しください。",
+  ALREADY_FRIENDS: "すでにフレンドです。",
+  FRIEND_REQUEST_EXISTS: "すでにフレンド申請が送信されています。",
+  FRIEND_REQUEST_NOT_FOUND: "フレンド申請が見つかりませんでした。",
+  CANNOT_FRIEND_SELF: "自分自身にはフレンド申請できません。",
   INTERNAL_ERROR: "予期しないエラーが発生しました。時間をおいて再度お試しください。",
 };
 

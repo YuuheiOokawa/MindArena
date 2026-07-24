@@ -7,7 +7,7 @@ import { StatTile } from "@/components/common/stat-tile";
 import { EmptyState } from "@/components/common/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Sparkles, Trophy } from "lucide-react";
+import { Settings, Sparkles, Trophy, Users } from "lucide-react";
 import { TITLES } from "@/config/titles";
 
 export default async function ProfilePage() {
@@ -49,6 +49,17 @@ export default async function ProfilePage() {
             <p className="text-2xl font-bold tabular-nums text-arena-gold">{profile.totalPoints.toLocaleString()} pt</p>
           </CardContent>
         </Card>
+
+        <Link
+          href="/friends"
+          className="flex items-center justify-between rounded-2xl border border-arena-border bg-white/[0.03] px-4 py-3.5 text-sm font-medium text-arena-white transition-colors hover:border-arena-primary/40"
+        >
+          <span className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-arena-primary-soft" />
+            フレンド
+          </span>
+          <span className="text-arena-silver/60">›</span>
+        </Link>
 
         <div className="grid grid-cols-3 gap-2">
           <StatTile label="総対戦数" value={profile.totalMatches} />

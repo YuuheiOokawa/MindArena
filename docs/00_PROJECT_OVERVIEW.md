@@ -24,8 +24,9 @@ text live in `src/config/*` and can be renamed without touching game logic.
 
 - Real-time WebSocket PvP (the matchmaking/game-session layer is abstracted so it can be
   swapped in later — see `04_ARCHITECTURE.md §Realtime`).
-- Friends, guilds, chat, ranking, seasons, shop, gacha — deliberately deferred, see
-  `15_FUTURE_ROADMAP.md`, but the data/service layers do not block adding them.
+- Guilds, chat, ranking, seasons, shop, gacha — deliberately deferred, see
+  `15_FUTURE_ROADMAP.md`, but the data/service layers do not block adding them. Friends
+  (request/accept/list/unfriend) is implemented; friend battles are still deferred.
 - League demotion (points only ever unlock leagues going up in the MVP; the multiplier/points
   service is already shaped to support demotion later).
 

@@ -48,12 +48,16 @@ function statusForCode(code: string): number {
       return 403;
     case "NOT_FOUND":
     case "SESSION_NOT_FOUND":
+    case "FRIEND_REQUEST_NOT_FOUND":
       return 404;
     case "VALIDATION_ERROR":
+    case "CANNOT_FRIEND_SELF":
       return 400;
     case "ALREADY_JOINED":
     case "CONFLICT":
     case "DUPLICATE_ACTION":
+    case "ALREADY_FRIENDS":
+    case "FRIEND_REQUEST_EXISTS":
       return 409;
     case "TOURNAMENT_NOT_JOINABLE":
     case "MATCH_NOT_READY":

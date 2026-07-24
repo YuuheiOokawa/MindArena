@@ -4,6 +4,7 @@ import { auth } from "@/infrastructure/auth/auth";
 import { getMyProfile } from "@/features/profiles/profile.service";
 import { getMyMatchHistory } from "@/features/profiles/match-history.service";
 import { resolveResumeState } from "@/features/tournaments/resume";
+import { listIncomingFriendRequests } from "@/features/friends/friend.service";
 import { AppScreen } from "@/components/layout/app-screen";
 import { StatTile } from "@/components/common/stat-tile";
 import { EmptyState } from "@/components/common/empty-state";
@@ -19,10 +20,11 @@ export default async function HomePage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const [profile, recent, resume] = await Promise.all([
+  const [profile, recent, resume, incomingFriendRequests] = await Promise.all([
     getMyProfile(session.user.id),
     getMyMatchHistory(session.user.id, undefined, 3),
     resolveResumeState(session.user.id),
+    listIncomingFriendRequests(session.user.id),
   ]);
 
   // "champion" is a one-time celebration screen reached right after the winning match, not a
@@ -43,9 +45,15 @@ export default async function HomePage() {
             <button className="flex h-9 w-9 items-center justify-center rounded-full text-arena-silver/80 hover:text-arena-white">
               <Bell className="h-4 w-4" />
             </button>
-            <button className="flex h-9 w-9 items-center justify-center rounded-full text-arena-silver/80 hover:text-arena-white">
+            <Link
+              href="/friends"
+              className="relative flex h-9 w-9 items-center justify-center rounded-full text-arena-silver/80 hover:text-arena-white"
+            >
               <Mail className="h-4 w-4" />
-            </button>
+              {incomingFriendRequests.length > 0 && (
+                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-arena-danger" />
+              )}
+            </Link>
           </div>
         </header>
 

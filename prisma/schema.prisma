@@ -84,6 +84,11 @@ enum CosmeticCategory {
   BADGE
 }
 
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+}
+
 // ---------------------------------------------------------------------------
 // Identity
 // ---------------------------------------------------------------------------
@@ -133,9 +138,27 @@ model PlayerProfile {
   gameStats            PlayerGameStats[]
   achievements         PlayerAchievement[]
   tournamentEntriesRel TournamentParticipant[]
+  friendshipsSent      Friendship[]            @relation("FriendshipRequester")
+  friendshipsReceived  Friendship[]            @relation("FriendshipAddressee")
 
   @@index([totalPoints])
   @@map("player_profiles")
+}
+
+model Friendship {
+  id          String           @id @default(cuid())
+  requesterId String
+  requester   PlayerProfile    @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addresseeId String
+  addressee   PlayerProfile    @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId, status])
+  @@index([requesterId, status])
+  @@map("friendships")
 }
 
 // ---------------------------------------------------------------------------
