@@ -1,0 +1,270 @@
+import { prisma } from "@/infrastructure/database/prisma";
+import { tournamentRepository } from "@/infrastructure/repositories/tournament.repository";
+import { tournamentParticipantRepository } from "@/infrastructure/repositories/tournament-participant.repository";
+import { tournamentMatchRepository } from "@/infrastructure/repositories/tournament-match.repository";
+import { gameTypeRepository } from "@/infrastructure/repositories/game-type.repository";
+import { playerGameStatsRepository } from "@/infrastructure/repositories/player-game-stats.repository";
+import { awardPoints } from "@/features/points/award-points.service";
+import { simulateBotVsBotMatch } from "@/features/games/core/simulate-bot-match";
+import { generateBracket, isFinalRound, pairNextRound } from "@/domain/services/bracket.service";
+import { hashStringToSeed } from "@/lib/utils/seeded-random";
+import { MatchStatus, ParticipantStatus, ParticipantType, PointReason, TournamentStatus } from "@/domain/enums";
+import { ROUND_CLEAR_REASON } from "@/config/round-rewards";
+import { DEFAULT_GAME_TIMERS } from "@/config/timers";
+import type { BotPlayer, GameContext, GameResult } from "@/domain/interfaces/psychological-game";
+import type { Prisma, PrismaClient } from "@/generated/prisma/client";
+
+type Tx = Prisma.TransactionClient | PrismaClient;
+
+function toBotPlayer(participantId: string, bot: { id: string; personality: string; judgment: number; deception: number; observation: number; riskTolerance: number; memory: number; randomness: number }): BotPlayer {
+  return {
+    participantId,
+    botProfileId: bot.id,
+    personality: bot.personality,
+    judgment: bot.judgment,
+    deception: bot.deception,
+    observation: bot.observation,
+    riskTolerance: bot.riskTolerance,
+    memory: bot.memory,
+    randomness: bot.randomness,
+  };
+}
+
+/** Shuffles the 32 participants and creates round-1 matches, then flips the tournament live. */
+export async function generateBracketForTournament(tournamentId: string) {
+  const participants = await tournamentParticipantRepository.listForTournament(tournamentId);
+  if (participants.length < 32) return;
+
+  const tournament = await tournamentRepository.findById(tournamentId);
+  if (!tournament || tournament.status !== TournamentStatus.RECRUITING) return;
+
+  const gameType = await gameTypeRepository.pickRandomActive();
+  const plans = generateBracket(
+    participants.map((p) => ({ participantId: p.id, displayName: p.displayName })),
+    hashStringToSeed(tournamentId),
+  );
+
+  await tournamentMatchRepository.createMany(
+    plans.map((plan) => ({
+      tournamentId,
+      round: plan.round,
+      matchNumber: plan.matchNumber,
+      player1ParticipantId: plan.participant1Id,
+      player2ParticipantId: plan.participant2Id,
+      gameTypeId: gameType.id,
+    })),
+  );
+
+  await tournamentRepository.update(tournamentId, {
+    status: TournamentStatus.IN_PROGRESS,
+    currentRound: 1,
+    startedAt: new Date(),
+  });
+
+  await resolveBotVsBotMatchesForRound(tournamentId, 1);
+}
+
+/** Simulates and finalizes every match in a round where both sides are BOTs. */
+export async function resolveBotVsBotMatchesForRound(tournamentId: string, round: number) {
+  const matches = await tournamentMatchRepository.listForRound(tournamentId, round);
+
+  for (const match of matches) {
+    if (match.status !== MatchStatus.READY) continue;
+    if (match.player1?.type !== ParticipantType.BOT || match.player2?.type !== ParticipantType.BOT) continue;
+    if (!match.player1.botId || !match.player2.botId) continue;
+
+    const [bot1, bot2] = await Promise.all([
+      prisma.botProfile.findUniqueOrThrow({ where: { id: match.player1.botId } }),
+      prisma.botProfile.findUniqueOrThrow({ where: { id: match.player2.botId } }),
+    ]);
+
+    const context: GameContext = {
+      sessionId: match.id,
+      participants: [
+        { participantId: match.player1.id, type: ParticipantType.BOT, botProfileId: bot1.id, displayName: match.player1.displayName },
+        { participantId: match.player2.id, type: ParticipantType.BOT, botProfileId: bot2.id, displayName: match.player2.displayName },
+      ],
+      timers: DEFAULT_GAME_TIMERS,
+    };
+
+    const bots: Record<string, BotPlayer> = {
+      [match.player1.id]: toBotPlayer(match.player1.id, bot1),
+      [match.player2.id]: toBotPlayer(match.player2.id, bot2),
+    };
+
+    const gameType = await gameTypeRepository.findById(match.gameTypeId);
+    const result = simulateBotVsBotMatch(resolveGameId(gameType.code), context, bots);
+
+    await finalizeMatchResult(match.id, result, result.finalScores[match.player1.id] ?? 0, result.finalScores[match.player2.id] ?? 0);
+  }
+}
+
+function resolveGameId(gameTypeCode: string): string {
+  return gameTypeCode.toLowerCase().replace(/_/g, "-");
+}
+
+/**
+ * Persists a match's outcome (idempotently), eliminates the loser, awards points, updates
+ * profile/game stats for human participants, and — if this completes the round — advances the
+ * bracket. Safe to call more than once for the same match; a second call is a no-op.
+ */
+export async function finalizeMatchResult(
+  matchId: string,
+  gameResult: GameResult,
+  player1Score: number,
+  player2Score: number,
+) {
+  const outcome = await prisma.$transaction(async (tx) => {
+    const existing = await tx.matchResult.findUnique({ where: { tournamentMatchId: matchId } });
+    if (existing) return { alreadyFinalized: true as const };
+
+    const match = await tx.tournamentMatch.findUniqueOrThrow({
+      where: { id: matchId },
+      include: { tournament: true, player1: true, player2: true },
+    });
+
+    if (!match.player1 || !match.player2 || !gameResult.winnerParticipantId || !gameResult.loserParticipantId) {
+      throw new Error("Cannot finalize a match without two participants and a decisive result.");
+    }
+
+    await tx.matchResult.create({
+      data: {
+        tournamentMatchId: matchId,
+        winnerParticipantId: gameResult.winnerParticipantId,
+        loserParticipantId: gameResult.loserParticipantId,
+        player1Score,
+        player2Score,
+        resultData: gameResult as unknown as Prisma.InputJsonValue,
+      },
+    });
+
+    await tx.tournamentMatch.update({
+      where: { id: matchId },
+      data: { status: MatchStatus.COMPLETED, winnerParticipantId: gameResult.winnerParticipantId, completedAt: new Date() },
+    });
+
+    const winner = match.player1.id === gameResult.winnerParticipantId ? match.player1 : match.player2;
+    const loser = winner.id === match.player1.id ? match.player2 : match.player1;
+
+    await tx.tournamentParticipant.update({
+      where: { id: loser.id },
+      data: { status: ParticipantStatus.ELIMINATED, eliminatedRound: match.round },
+    });
+
+    const league = await tx.league.findUniqueOrThrow({ where: { id: match.tournament.leagueId } });
+    const isFinal = isFinalRound(match.round, match.tournament.maxPlayers);
+
+    if (winner.type === ParticipantType.HUMAN && winner.playerId) {
+      const reason = isFinal ? PointReason.CHAMPION : ROUND_CLEAR_REASON[match.round];
+      await rewardAndUpdateStats(tx, winner.playerId, reason, match.tournament.id, league, true, match.gameTypeId, isFinal);
+    }
+
+    if (isFinal && loser.type === ParticipantType.HUMAN && loser.playerId) {
+      await rewardAndUpdateStats(tx, loser.playerId, PointReason.RUNNER_UP, match.tournament.id, league, false, match.gameTypeId, false);
+    } else if (loser.type === ParticipantType.HUMAN && loser.playerId) {
+      await updateStatsOnly(tx, loser.playerId, false, match.gameTypeId);
+    }
+
+    if (isFinal) {
+      await tx.tournamentParticipant.update({ where: { id: winner.id }, data: { finalPlacement: 1 } });
+      await tx.tournamentParticipant.update({ where: { id: loser.id }, data: { finalPlacement: 2 } });
+      await tx.tournament.update({
+        where: { id: match.tournamentId },
+        data: { status: TournamentStatus.COMPLETED, completedAt: new Date(), winnerParticipantId: winner.id },
+      });
+    }
+
+    return { alreadyFinalized: false as const, tournamentId: match.tournamentId, round: match.round, isFinal };
+  });
+
+  if (!outcome.alreadyFinalized && !outcome.isFinal) {
+    await tryAdvanceRound(outcome.tournamentId, outcome.round);
+  }
+
+  return outcome;
+}
+
+async function rewardAndUpdateStats(
+  tx: Tx,
+  playerProfileId: string,
+  reason: PointReason,
+  tournamentId: string,
+  league: { id: string; rewardMultiplier: number },
+  won: boolean,
+  gameTypeId: string,
+  isChampion: boolean,
+) {
+  const profile = await tx.playerProfile.findUniqueOrThrow({ where: { id: playerProfileId } });
+  await awardPoints(tx, {
+    playerProfileId,
+    currentPoints: profile.totalPoints,
+    reason,
+    league,
+    tournamentId,
+    leagueId: league.id,
+  });
+  await updateStatsOnly(tx, playerProfileId, won, gameTypeId, isChampion);
+}
+
+async function updateStatsOnly(tx: Tx, playerProfileId: string, won: boolean, gameTypeId: string, isChampion = false) {
+  const profile = await tx.playerProfile.findUniqueOrThrow({ where: { id: playerProfileId } });
+  const newStreak = won ? profile.currentWinStreak + 1 : 0;
+
+  await tx.playerProfile.update({
+    where: { id: playerProfileId },
+    data: {
+      totalMatches: { increment: 1 },
+      totalWins: won ? { increment: 1 } : undefined,
+      totalLosses: won ? undefined : { increment: 1 },
+      currentWinStreak: newStreak,
+      bestWinStreak: Math.max(profile.bestWinStreak, newStreak),
+      tournamentWins: isChampion ? { increment: 1 } : undefined,
+    },
+  });
+
+  await playerGameStatsRepository.recordMatch(tx, playerProfileId, gameTypeId, won);
+}
+
+/** Once every match in a round is complete, pairs winners into the next round and auto-resolves any all-BOT matches there. */
+export async function tryAdvanceRound(tournamentId: string, completedRound: number) {
+  const matches = await tournamentMatchRepository.listForRound(tournamentId, completedRound);
+  if (matches.length === 0 || !matches.every((m) => m.status === MatchStatus.COMPLETED)) return;
+
+  const tournament = await tournamentRepository.findById(tournamentId);
+  if (!tournament || tournament.status === TournamentStatus.COMPLETED) return;
+
+  const orderedWinners = matches
+    .sort((a, b) => a.matchNumber - b.matchNumber)
+    .map((m) => m.winnerParticipantId)
+    .filter((id): id is string => Boolean(id));
+
+  if (orderedWinners.length < 2) return;
+
+  const nextRound = completedRound + 1;
+  const plans = pairNextRound(nextRound, orderedWinners);
+  const gameType = await gameTypeRepository.pickRandomActive();
+
+  await tournamentMatchRepository.createMany(
+    plans.map((plan) => ({
+      tournamentId,
+      round: plan.round,
+      matchNumber: plan.matchNumber,
+      player1ParticipantId: plan.participant1Id,
+      player2ParticipantId: plan.participant2Id,
+      gameTypeId: gameType.id,
+    })),
+  );
+
+  await tournamentRepository.update(tournamentId, { currentRound: nextRound });
+
+  if (isFinalRound(nextRound, tournament.maxPlayers)) {
+    for (const participantId of orderedWinners) {
+      const participant = await tournamentParticipantRepository.findById(participantId);
+      if (participant.type === ParticipantType.HUMAN && participant.playerId) {
+        await prisma.playerProfile.update({ where: { id: participant.playerId }, data: { finalsReached: { increment: 1 } } });
+      }
+    }
+  }
+
+  await resolveBotVsBotMatchesForRound(tournamentId, nextRound);
+}

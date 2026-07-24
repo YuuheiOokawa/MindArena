@@ -1,0 +1,59 @@
+import { prisma } from "@/infrastructure/database/prisma";
+import { ParticipantStatus, ParticipantType } from "@/domain/enums";
+import type { Prisma } from "@/generated/prisma/client";
+
+export interface NewParticipant {
+  tournamentId: string;
+  playerId?: string;
+  botId?: string;
+  type: ParticipantType;
+  displayName: string;
+  seed: number;
+}
+
+export const tournamentParticipantRepository = {
+  async count(tournamentId: string) {
+    return prisma.tournamentParticipant.count({ where: { tournamentId } });
+  },
+
+  async createMany(participants: NewParticipant[]) {
+    for (const p of participants) {
+      if (Boolean(p.playerId) === Boolean(p.botId)) {
+        throw new Error("A tournament participant must have exactly one of playerId or botId.");
+      }
+    }
+    await prisma.tournamentParticipant.createMany({ data: participants });
+  },
+
+  async listForTournament(tournamentId: string) {
+    return prisma.tournamentParticipant.findMany({
+      where: { tournamentId },
+      include: { player: true, bot: true },
+      orderBy: { seed: "asc" },
+    });
+  },
+
+  async findById(id: string) {
+    return prisma.tournamentParticipant.findUniqueOrThrow({ where: { id }, include: { player: true, bot: true } });
+  },
+
+  async isPlayerAlreadyIn(tournamentId: string, playerId: string) {
+    const existing = await prisma.tournamentParticipant.findUnique({
+      where: { tournamentId_playerId: { tournamentId, playerId } },
+    });
+    return Boolean(existing);
+  },
+
+  async markEliminated(id: string, round: number, placement?: number) {
+    const data: Prisma.TournamentParticipantUpdateInput = {
+      status: ParticipantStatus.ELIMINATED,
+      eliminatedRound: round,
+    };
+    if (placement) data.finalPlacement = placement;
+    return prisma.tournamentParticipant.update({ where: { id }, data });
+  },
+
+  async markChampion(id: string) {
+    return prisma.tournamentParticipant.update({ where: { id }, data: { finalPlacement: 1 } });
+  },
+};

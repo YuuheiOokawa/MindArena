@@ -1,0 +1,414 @@
+// MIND ARENA — database schema. See docs/06_DATABASE_DESIGN.md for the rationale behind
+// non-obvious choices (Json columns, append-only ledger, derived winRate, etc).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums (mirrors src/domain/enums)
+// ---------------------------------------------------------------------------
+
+enum TournamentStatus {
+  RECRUITING
+  READY
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum MatchStatus {
+  WAITING
+  READY
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ParticipantType {
+  HUMAN
+  BOT
+}
+
+enum ParticipantStatus {
+  ACTIVE
+  ELIMINATED
+  BYE
+  WITHDRAWN
+}
+
+enum GameSessionStatus {
+  ACTIVE
+  COMPLETED
+  ABANDONED
+}
+
+enum BotDifficulty {
+  EASY
+  NORMAL
+  HARD
+  EXPERT
+  MASTER
+}
+
+enum BotPersonality {
+  RANDOM
+  CAUTIOUS
+  AGGRESSIVE
+  BETRAYER
+  PATTERN
+  ANALYST
+}
+
+enum PointReason {
+  TOURNAMENT_ENTRY
+  ROUND_1_CLEAR
+  ROUND_2_CLEAR
+  QUARTERFINAL_CLEAR
+  SEMIFINAL_CLEAR
+  RUNNER_UP
+  CHAMPION
+  ACHIEVEMENT_BONUS
+  ADMIN_ADJUSTMENT
+}
+
+enum CosmeticCategory {
+  FRAME
+  TITLE
+  BACKGROUND
+  BADGE
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  username      String    @unique
+  email         String    @unique
+  passwordHash  String
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLoginAt   DateTime?
+
+  profile PlayerProfile?
+
+  @@map("users")
+}
+
+model PlayerProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName       String
+  totalPoints       Int      @default(0)
+  currentLeagueId   String
+  currentLeague     League   @relation(fields: [currentLeagueId], references: [id])
+  totalMatches      Int      @default(0)
+  totalWins         Int      @default(0)
+  totalLosses       Int      @default(0)
+  currentWinStreak  Int      @default(0)
+  bestWinStreak     Int      @default(0)
+  tournamentEntries Int      @default(0)
+  tournamentWins    Int      @default(0)
+  finalsReached     Int      @default(0)
+  selectedTitleId   String?
+  selectedFrameId   String?
+  showBotTag        Boolean  @default(true)
+  reducedMotion     Boolean  @default(false)
+  soundEnabled      Boolean  @default(true)
+  bgmEnabled        Boolean  @default(true)
+  vibrationEnabled  Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  pointTransactions    PointTransaction[]
+  gameStats            PlayerGameStats[]
+  achievements         PlayerAchievement[]
+  tournamentEntriesRel TournamentParticipant[]
+
+  @@index([totalPoints])
+  @@map("player_profiles")
+}
+
+// ---------------------------------------------------------------------------
+// Master data (source spec §7, §33 — manageable, never hardcoded in components)
+// ---------------------------------------------------------------------------
+
+model League {
+  id                  String        @id @default(cuid())
+  code                String        @unique
+  name                String
+  displayName         String
+  description         String
+  requiredPoints      Int
+  rewardMultiplier    Float         @default(1.0)
+  championReward      Int           @default(0)
+  runnerUpReward      Int           @default(0)
+  topFourReward       Int           @default(0)
+  participationReward Int           @default(0)
+  botDifficulty       BotDifficulty
+  themeKey            String
+  frameKey            String
+  displayOrder        Int
+  isActive            Boolean       @default(true)
+
+  profiles    PlayerProfile[]
+  tournaments Tournament[]
+
+  @@index([displayOrder])
+  @@map("leagues")
+}
+
+model GameType {
+  id            String  @id @default(cuid())
+  code          String  @unique
+  name          String
+  description   String
+  minPlayers    Int
+  maxPlayers    Int
+  configuration Json    @default("{}")
+  isActive      Boolean @default(true)
+
+  matches     TournamentMatch[]
+  sessions    GameSession[]
+  playerStats PlayerGameStats[]
+
+  @@map("game_types")
+}
+
+model BotProfile {
+  id            String         @id @default(cuid())
+  name          String
+  personality   BotPersonality
+  difficulty    BotDifficulty
+  judgment      Int
+  deception     Int
+  observation   Int
+  riskTolerance Int
+  memory        Int
+  randomness    Int
+  avatarKey     String
+  isActive      Boolean        @default(true)
+
+  participations TournamentParticipant[]
+
+  @@index([difficulty])
+  @@map("bot_profiles")
+}
+
+model Achievement {
+  id             String  @id @default(cuid())
+  code           String  @unique
+  name           String
+  description    String
+  conditionType  String
+  conditionValue Int
+  rewardData     Json    @default("{}")
+  isActive       Boolean @default(true)
+
+  unlocks PlayerAchievement[]
+
+  @@map("achievements")
+}
+
+model CosmeticItem {
+  id             String           @id @default(cuid())
+  code           String           @unique
+  name           String
+  category       CosmeticCategory
+  requiredPoints Int
+  assetKey       String
+  effectConfig   Json             @default("{}")
+  isActive       Boolean          @default(true)
+
+  @@map("cosmetic_items")
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("announcements")
+}
+
+// ---------------------------------------------------------------------------
+// Tournament
+// ---------------------------------------------------------------------------
+
+model Tournament {
+  id                  String           @id @default(cuid())
+  leagueId            String
+  league              League           @relation(fields: [leagueId], references: [id])
+  status              TournamentStatus @default(RECRUITING)
+  maxPlayers          Int              @default(32)
+  currentRound        Int              @default(0)
+  startedAt           DateTime?
+  completedAt         DateTime?
+  winnerParticipantId String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  participants TournamentParticipant[]
+  matches      TournamentMatch[]
+
+  @@index([leagueId, status])
+  @@map("tournaments")
+}
+
+model TournamentParticipant {
+  id              String            @id @default(cuid())
+  tournamentId    String
+  tournament      Tournament        @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  playerId        String?
+  player          PlayerProfile?    @relation(fields: [playerId], references: [id])
+  botId           String?
+  bot             BotProfile?       @relation(fields: [botId], references: [id])
+  type            ParticipantType
+  displayName     String
+  seed            Int
+  status          ParticipantStatus @default(ACTIVE)
+  eliminatedRound Int?
+  finalPlacement  Int?
+
+  matchesAsPlayer1 TournamentMatch[] @relation("MatchPlayer1")
+  matchesAsPlayer2 TournamentMatch[] @relation("MatchPlayer2")
+  matchesWon       TournamentMatch[] @relation("MatchWinner")
+  gameActions      GameAction[]
+
+  @@unique([tournamentId, playerId])
+  @@index([tournamentId, status])
+  @@map("tournament_participants")
+}
+
+model TournamentMatch {
+  id                   String                  @id @default(cuid())
+  tournamentId         String
+  tournament           Tournament              @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  round                Int
+  matchNumber          Int
+  player1ParticipantId String?
+  player1              TournamentParticipant?  @relation("MatchPlayer1", fields: [player1ParticipantId], references: [id])
+  player2ParticipantId String?
+  player2              TournamentParticipant?  @relation("MatchPlayer2", fields: [player2ParticipantId], references: [id])
+  winnerParticipantId  String?
+  winner               TournamentParticipant?  @relation("MatchWinner", fields: [winnerParticipantId], references: [id])
+  gameTypeId           String
+  gameType             GameType                @relation(fields: [gameTypeId], references: [id])
+  status               MatchStatus             @default(WAITING)
+  startedAt            DateTime?
+  completedAt          DateTime?
+
+  session GameSession?
+  result  MatchResult?
+
+  @@index([tournamentId, round])
+  @@map("tournament_matches")
+}
+
+// ---------------------------------------------------------------------------
+// Live game session
+// ---------------------------------------------------------------------------
+
+model GameSession {
+  id                String            @id @default(cuid())
+  tournamentMatchId String            @unique
+  tournamentMatch   TournamentMatch   @relation(fields: [tournamentMatchId], references: [id], onDelete: Cascade)
+  gameTypeId        String
+  gameType          GameType          @relation(fields: [gameTypeId], references: [id])
+  status            GameSessionStatus @default(ACTIVE)
+  currentRound      Int               @default(1)
+  state             Json
+  startedAt         DateTime          @default(now())
+  completedAt       DateTime?
+
+  actions GameAction[]
+
+  @@map("game_sessions")
+}
+
+model GameAction {
+  id            String                @id @default(cuid())
+  gameSessionId String
+  gameSession   GameSession           @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  participantId String
+  participant   TournamentParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  round         Int
+  actionType    String
+  actionData    Json
+  createdAt     DateTime              @default(now())
+
+  @@index([gameSessionId, round])
+  @@map("game_actions")
+}
+
+model MatchResult {
+  id                  String          @id @default(cuid())
+  tournamentMatchId   String          @unique
+  tournamentMatch     TournamentMatch @relation(fields: [tournamentMatchId], references: [id], onDelete: Cascade)
+  winnerParticipantId String?
+  loserParticipantId  String?
+  player1Score        Int
+  player2Score        Int
+  resultData          Json
+  createdAt           DateTime        @default(now())
+
+  @@map("match_results")
+}
+
+// ---------------------------------------------------------------------------
+// Growth / rewards
+// ---------------------------------------------------------------------------
+
+model PointTransaction {
+  id              String        @id @default(cuid())
+  playerProfileId String
+  playerProfile   PlayerProfile @relation(fields: [playerProfileId], references: [id], onDelete: Cascade)
+  amount          Int
+  reason          PointReason
+  tournamentId    String?
+  leagueId        String?
+  balanceBefore   Int
+  balanceAfter    Int
+  createdAt       DateTime      @default(now())
+
+  @@index([playerProfileId, createdAt])
+  @@map("point_transactions")
+}
+
+model PlayerGameStats {
+  id              String        @id @default(cuid())
+  playerProfileId String
+  playerProfile   PlayerProfile @relation(fields: [playerProfileId], references: [id], onDelete: Cascade)
+  gameTypeId      String
+  gameType        GameType      @relation(fields: [gameTypeId], references: [id])
+  matches         Int           @default(0)
+  wins            Int           @default(0)
+  losses          Int           @default(0)
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([playerProfileId, gameTypeId])
+  @@map("player_game_stats")
+}
+
+model PlayerAchievement {
+  id              String        @id @default(cuid())
+  playerProfileId String
+  playerProfile   PlayerProfile @relation(fields: [playerProfileId], references: [id], onDelete: Cascade)
+  achievementId   String
+  achievement     Achievement   @relation(fields: [achievementId], references: [id])
+  unlockedAt      DateTime      @default(now())
+
+  @@unique([playerProfileId, achievementId])
+  @@map("player_achievements")
+}

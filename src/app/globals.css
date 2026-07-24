@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+:root {
+  --color-arena-bg: #05070d;
+  --color-arena-surface: #0e1220;
+  --color-arena-surface-2: #161c2e;
+  --color-arena-border: #232a42;
+  --color-arena-silver: #c7ccd8;
+  --color-arena-white: #f5f6fa;
+  --color-arena-gold: #d4af6a;
+  --color-arena-gold-soft: #efe3c3;
+  --color-arena-danger: #c0524a;
+  --color-arena-success: #4d9d7c;
+}
+
+@theme inline {
+  --color-arena-bg: var(--color-arena-bg);
+  --color-arena-surface: var(--color-arena-surface);
+  --color-arena-surface-2: var(--color-arena-surface-2);
+  --color-arena-border: var(--color-arena-border);
+  --color-arena-silver: var(--color-arena-silver);
+  --color-arena-white: var(--color-arena-white);
+  --color-arena-gold: var(--color-arena-gold);
+  --color-arena-gold-soft: var(--color-arena-gold-soft);
+  --color-arena-danger: var(--color-arena-danger);
+  --color-arena-success: var(--color-arena-success);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--color-arena-bg);
+  color: var(--color-arena-white);
+}
+
+body {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
