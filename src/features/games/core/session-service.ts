@@ -31,12 +31,13 @@ function resolveGameId(gameTypeCode: string): string {
   return gameTypeCode.toLowerCase().replace(/_/g, "-");
 }
 
-async function buildContext(matchId: string) {
+async function buildContext(matchId: string, opts: { requireActive?: boolean } = {}) {
+  const { requireActive = true } = opts;
   const match = await tournamentMatchRepository.findById(matchId);
   if (!match.player1 || !match.player2) {
     throw new AppError("MATCH_NOT_READY", "対戦相手がまだ決まっていません。");
   }
-  if (match.status === MatchStatus.COMPLETED || match.status === MatchStatus.CANCELLED) {
+  if (requireActive && (match.status === MatchStatus.COMPLETED || match.status === MatchStatus.CANCELLED)) {
     throw new AppError("MATCH_NOT_READY", "この対戦はすでに終了しています。");
   }
 
@@ -101,7 +102,10 @@ export async function startOrResumeSession(matchId: string, requestingParticipan
 }
 
 export async function getSessionStateForParticipant(matchId: string, requestingParticipantId: string) {
-  const { match } = await buildContext(matchId);
+  // requireActive: false — this is a read path. In a human-vs-human match, only the player whose
+  // submission resolves the final round sees the outcome via their own POST response; the other
+  // player only learns it through this poll, which fires after the match is already COMPLETED.
+  const { match } = await buildContext(matchId, { requireActive: false });
   assertParticipant(matchId, match, requestingParticipantId);
 
   const session = await gameSessionRepository.findByMatchId(matchId);

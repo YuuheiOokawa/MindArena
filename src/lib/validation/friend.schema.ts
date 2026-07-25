@@ -5,3 +5,9 @@ export const sendFriendRequestSchema = z.object({
 });
 
 export type SendFriendRequestInput = z.infer<typeof sendFriendRequestSchema>;
+
+export const sendChallengeSchema = z.object({
+  opponentProfileId: z.string().min(1),
+});
+
+export type SendChallengeInput = z.infer<typeof sendChallengeSchema>;

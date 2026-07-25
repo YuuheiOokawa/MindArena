@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { apiClient, ApiClientError } from "@/lib/api-client";
 import { AppScreen } from "@/components/layout/app-screen";
 import { LoadingState } from "@/components/common/loading-state";
@@ -11,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils/cn";
-import { Search, UserPlus, UserCheck, UserX, Users, Inbox } from "lucide-react";
+import { Search, UserPlus, UserCheck, UserX, Users, Inbox, Swords, Check, X } from "lucide-react";
 
 interface FriendCard {
   profileId: string;
@@ -43,13 +44,28 @@ interface SearchResult extends FriendCard {
   friendshipId: string | null;
 }
 
-type Tab = "friends" | "requests";
+interface IncomingChallenge {
+  challengeId: string;
+  createdAt: string;
+  from: FriendCard;
+}
+
+interface OutgoingChallenge {
+  challengeId: string;
+  createdAt: string;
+  to: FriendCard;
+}
+
+type Tab = "friends" | "requests" | "battles";
 
 export default function FriendsPage() {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("friends");
   const [friends, setFriends] = useState<FriendEntry[] | null>(null);
   const [incoming, setIncoming] = useState<IncomingRequest[] | null>(null);
   const [outgoing, setOutgoing] = useState<OutgoingRequest[] | null>(null);
+  const [incomingChallenges, setIncomingChallenges] = useState<IncomingChallenge[] | null>(null);
+  const [outgoingChallenges, setOutgoingChallenges] = useState<OutgoingChallenge[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
@@ -61,13 +77,16 @@ export default function FriendsPage() {
   async function loadAll() {
     setError(null);
     try {
-      const [friendList, requests] = await Promise.all([
+      const [friendList, requests, challenges] = await Promise.all([
         apiClient.get<FriendEntry[]>("/api/friends"),
         apiClient.get<{ incoming: IncomingRequest[]; outgoing: OutgoingRequest[] }>("/api/friends/requests"),
+        apiClient.get<{ incoming: IncomingChallenge[]; outgoing: OutgoingChallenge[] }>("/api/friends/challenges"),
       ]);
       setFriends(friendList);
       setIncoming(requests.incoming);
       setOutgoing(requests.outgoing);
+      setIncomingChallenges(challenges.incoming);
+      setOutgoingChallenges(challenges.outgoing);
     } catch (e) {
       setError(e instanceof ApiClientError ? e.message : "読み込みに失敗しました。");
     }
@@ -85,6 +104,14 @@ export default function FriendsPage() {
         if (cancelled) return;
         setIncoming(requests.incoming);
         setOutgoing(requests.outgoing);
+      })
+      .catch((e) => !cancelled && setError(e instanceof ApiClientError ? e.message : "読み込みに失敗しました。"));
+    apiClient
+      .get<{ incoming: IncomingChallenge[]; outgoing: OutgoingChallenge[] }>("/api/friends/challenges")
+      .then((challenges) => {
+        if (cancelled) return;
+        setIncomingChallenges(challenges.incoming);
+        setOutgoingChallenges(challenges.outgoing);
       })
       .catch((e) => !cancelled && setError(e instanceof ApiClientError ? e.message : "読み込みに失敗しました。"));
     return () => {
@@ -145,8 +172,44 @@ export default function FriendsPage() {
     }
   }
 
-  const loading = friends === null || incoming === null || outgoing === null;
-  const pendingCount = (incoming?.length ?? 0) + (outgoing?.length ?? 0);
+  async function sendChallenge(profileId: string) {
+    setActionPending(profileId);
+    try {
+      await apiClient.post("/api/friends/challenges", { opponentProfileId: profileId });
+      await loadAll();
+    } catch (e) {
+      setError(e instanceof ApiClientError ? e.message : "対戦の申し込みに失敗しました。");
+    } finally {
+      setActionPending(null);
+    }
+  }
+
+  async function acceptChallenge(challengeId: string) {
+    setActionPending(challengeId);
+    try {
+      const result = await apiClient.post<{ tournamentId: string }>(`/api/friends/challenges/${challengeId}/accept`);
+      router.push(`/tournaments/${result.tournamentId}/bracket`);
+    } catch (e) {
+      setError(e instanceof ApiClientError ? e.message : "対戦の開始に失敗しました。");
+      setActionPending(null);
+    }
+  }
+
+  async function declineChallenge(challengeId: string) {
+    setActionPending(challengeId);
+    try {
+      await apiClient.delete(`/api/friends/challenges/${challengeId}`);
+      await loadAll();
+    } catch (e) {
+      setError(e instanceof ApiClientError ? e.message : "操作に失敗しました。");
+    } finally {
+      setActionPending(null);
+    }
+  }
+
+  const loading = friends === null || incoming === null || outgoing === null || incomingChallenges === null || outgoingChallenges === null;
+  const pendingRequestCount = (incoming?.length ?? 0) + (outgoing?.length ?? 0);
+  const pendingBattleCount = (incomingChallenges?.length ?? 0) + (outgoingChallenges?.length ?? 0);
 
   return (
     <AppScreen nav>
@@ -197,7 +260,10 @@ export default function FriendsPage() {
             フレンド{friends ? ` (${friends.length})` : ""}
           </TabButton>
           <TabButton active={tab === "requests"} onClick={() => setTab("requests")} icon={Inbox}>
-            申請{pendingCount > 0 ? ` (${pendingCount})` : ""}
+            申請{pendingRequestCount > 0 ? ` (${pendingRequestCount})` : ""}
+          </TabButton>
+          <TabButton active={tab === "battles"} onClick={() => setTab("battles")} icon={Swords}>
+            対戦{pendingBattleCount > 0 ? ` (${pendingBattleCount})` : ""}
           </TabButton>
         </div>
 
@@ -219,15 +285,26 @@ export default function FriendsPage() {
                         {friend.titleName && <Badge variant="gold">{friend.titleName}</Badge>}
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeFriendship(friend.friendshipId)}
-                      disabled={actionPending === friend.friendshipId}
-                      aria-label="フレンド解除"
-                    >
-                      <UserX className="h-4 w-4 text-arena-danger" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => sendChallenge(friend.profileId)}
+                        disabled={actionPending === friend.profileId}
+                      >
+                        <Swords className="h-3.5 w-3.5" />
+                        対戦
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeFriendship(friend.friendshipId)}
+                        disabled={actionPending === friend.friendshipId}
+                        aria-label="フレンド解除"
+                      >
+                        <UserX className="h-4 w-4 text-arena-danger" />
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))
@@ -296,6 +373,78 @@ export default function FriendsPage() {
                         size="sm"
                         onClick={() => removeFriendship(req.friendshipId)}
                         disabled={actionPending === req.friendshipId}
+                      >
+                        取り消す
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </section>
+          </div>
+        )}
+
+        {!error && !loading && tab === "battles" && (
+          <div className="flex flex-col gap-4">
+            <section className="flex flex-col gap-2">
+              <h2 className="text-xs font-semibold text-arena-silver">受け取った対戦申し込み</h2>
+              {incomingChallenges!.length === 0 ? (
+                <EmptyState icon={Swords} title="受け取った対戦申し込みはありません" />
+              ) : (
+                incomingChallenges!.map((c) => (
+                  <Card key={c.challengeId}>
+                    <CardContent className="flex items-center justify-between py-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-arena-white">{c.from.displayName}</p>
+                        <Badge variant="primary" className="mt-1">
+                          {c.from.league.displayName}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="gold"
+                          size="sm"
+                          onClick={() => acceptChallenge(c.challengeId)}
+                          disabled={actionPending === c.challengeId}
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                          受ける
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => declineChallenge(c.challengeId)}
+                          disabled={actionPending === c.challengeId}
+                          aria-label="断る"
+                        >
+                          <X className="h-4 w-4 text-arena-danger" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </section>
+
+            <section className="flex flex-col gap-2">
+              <h2 className="text-xs font-semibold text-arena-silver">送信した対戦申し込み</h2>
+              {outgoingChallenges!.length === 0 ? (
+                <EmptyState title="送信した対戦申し込みはありません" />
+              ) : (
+                outgoingChallenges!.map((c) => (
+                  <Card key={c.challengeId}>
+                    <CardContent className="flex items-center justify-between py-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-arena-white">{c.to.displayName}</p>
+                        <Badge variant="neutral" className="mt-1">
+                          返答待ち
+                        </Badge>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => declineChallenge(c.challengeId)}
+                        disabled={actionPending === c.challengeId}
                       >
                         取り消す
                       </Button>

@@ -74,6 +74,12 @@ export enum FriendshipStatus {
   ACCEPTED = "ACCEPTED",
 }
 
+export enum FriendChallengeStatus {
+  PENDING = "PENDING",
+  ACCEPTED = "ACCEPTED",
+  DECLINED = "DECLINED",
+}
+
 export enum TournamentRound {
   ROUND_OF_32 = 1,
   ROUND_OF_16 = 2,

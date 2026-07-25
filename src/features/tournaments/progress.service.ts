@@ -31,13 +31,14 @@ function toBotPlayer(participantId: string, bot: { id: string; personality: stri
   };
 }
 
-/** Shuffles the 32 participants and creates round-1 matches, then flips the tournament live. */
+/** Shuffles the participants and creates round-1 matches, then flips the tournament live. Called
+ * once the roster is full — 32 for a normal league tournament, 2 for a friend challenge. */
 export async function generateBracketForTournament(tournamentId: string) {
-  const participants = await tournamentParticipantRepository.listForTournament(tournamentId);
-  if (participants.length < 32) return;
-
   const tournament = await tournamentRepository.findById(tournamentId);
   if (!tournament || tournament.status !== TournamentStatus.RECRUITING) return;
+
+  const participants = await tournamentParticipantRepository.listForTournament(tournamentId);
+  if (participants.length < tournament.maxPlayers) return;
 
   const gameTypes = await gameTypeRepository.findAllActive();
   const plans = generateBracket(

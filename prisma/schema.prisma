@@ -89,6 +89,12 @@ enum FriendshipStatus {
   ACCEPTED
 }
 
+enum FriendChallengeStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
 // ---------------------------------------------------------------------------
 // Identity
 // ---------------------------------------------------------------------------
@@ -145,6 +151,8 @@ model PlayerProfile {
   friendshipsReceived  Friendship[]            @relation("FriendshipAddressee")
   leagueTrophies       LeagueTrophy[]
   cosmeticPurchases    CosmeticPurchase[]
+  challengesSent       FriendChallenge[]       @relation("ChallengeSent")
+  challengesReceived   FriendChallenge[]       @relation("ChallengeReceived")
 
   @@index([totalPoints])
   @@map("player_profiles")
@@ -181,6 +189,28 @@ model Friendship {
   @@index([addresseeId, status])
   @@index([requesterId, status])
   @@map("friendships")
+}
+
+/**
+ * A 1-on-1 challenge between two friends. Accepting creates a 2-player Tournament (maxPlayers=2)
+ * that reuses the normal bracket/match/session/points machinery — round 1 is also the final.
+ */
+model FriendChallenge {
+  id           String                @id @default(cuid())
+  challengerId String
+  challenger   PlayerProfile         @relation("ChallengeSent", fields: [challengerId], references: [id], onDelete: Cascade)
+  opponentId   String
+  opponent     PlayerProfile         @relation("ChallengeReceived", fields: [opponentId], references: [id], onDelete: Cascade)
+  status       FriendChallengeStatus @default(PENDING)
+  tournamentId String?               @unique
+  tournament   Tournament?           @relation(fields: [tournamentId], references: [id])
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  @@unique([challengerId, opponentId])
+  @@index([opponentId, status])
+  @@index([challengerId, status])
+  @@map("friend_challenges")
 }
 
 // ---------------------------------------------------------------------------
@@ -327,8 +357,9 @@ model Tournament {
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
 
-  participants TournamentParticipant[]
-  matches      TournamentMatch[]
+  participants    TournamentParticipant[]
+  matches         TournamentMatch[]
+  friendChallenge FriendChallenge?
 
   @@index([leagueId, status])
   @@map("tournaments")

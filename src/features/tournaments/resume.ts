@@ -35,15 +35,21 @@ export async function resolveResumeState(userId: string): Promise<ResumeScreen> 
       const winner = await prisma.tournamentParticipant.findUnique({ where: { id: tournament.winnerParticipantId } });
       if (winner?.playerId === profile.id) return { screen: "champion", tournamentId: tournament.id };
     }
-    return { screen: "bracket", tournamentId: tournament.id };
+    // Same dead-end as the eliminated-participant case below: a non-winner has nothing left to
+    // resume into once the whole tournament is over (most visible in a 2-player friend battle,
+    // where round 1 is also the final, so the tournament completes the instant the loser's match does).
+    return { screen: "home" };
   }
 
   const participant = await prisma.tournamentParticipant.findUnique({
     where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: profile.id } },
   });
 
+  // Eliminated (or otherwise no-longer-active) players have nothing left to resume into for this
+  // tournament — routing them back to its bracket left "対戦を続ける" on Home permanently pointing
+  // at a dead spectator view with no playable match, which reads as "can't continue" after a loss.
   if (!participant || participant.status !== ParticipantStatus.ACTIVE) {
-    return { screen: "bracket", tournamentId: tournament.id };
+    return { screen: "home" };
   }
 
   const match = await tournamentMatchRepository.findForPlayer(tournament.id, participant.id);
