@@ -16,9 +16,13 @@ export function getE2eTestBotAction(
 
   switch (gameId) {
     case "trust-or-betray":
-      return { ...base, actionType: "CHOOSE", actionData: { choice: "TRUST" } };
+      return phase === "CHOOSE"
+        ? { ...base, actionType: "CHOOSE", actionData: { choice: "TRUST" } }
+        : { ...base, actionType: "DECLARE", actionData: { choice: "TRUST" } };
     case "final-prediction":
-      return { ...base, actionType: "CHOOSE", actionData: { move: "GUARD" } };
+      return phase === "CHOOSE"
+        ? { ...base, actionType: "CHOOSE", actionData: { move: "GUARD" } }
+        : { ...base, actionType: "DECLARE", actionData: { move: "GUARD" } };
     case "minority-choice":
       return phase === "CHOOSE"
         ? { ...base, actionType: "CHOOSE", actionData: { choice: "A" } }
@@ -34,8 +38,10 @@ export function getE2eTestBotAction(
 
 /** The human move that deterministically beats getE2eTestBotAction's fixed move for each game. */
 export const E2E_WINNING_HUMAN_ACTION: Record<string, { actionType: string; actionData: unknown } | ((phase: string) => { actionType: string; actionData: unknown })> = {
-  "trust-or-betray": { actionType: "CHOOSE", actionData: { choice: "BETRAY" } },
-  "final-prediction": { actionType: "CHOOSE", actionData: { move: "READ" } },
+  "trust-or-betray": (phase: string) =>
+    phase === "CHOOSE" ? { actionType: "CHOOSE", actionData: { choice: "BETRAY" } } : { actionType: "DECLARE", actionData: { choice: "BETRAY" } },
+  "final-prediction": (phase: string) =>
+    phase === "CHOOSE" ? { actionType: "CHOOSE", actionData: { move: "READ" } } : { actionType: "DECLARE", actionData: { move: "READ" } },
   "minority-choice": (phase: string) =>
     phase === "CHOOSE" ? { actionType: "CHOOSE", actionData: { choice: "B" } } : { actionType: "DECLARE", actionData: { choice: "B" } },
   "number-bluff": (phase: string) =>

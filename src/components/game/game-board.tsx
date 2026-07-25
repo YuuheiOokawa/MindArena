@@ -18,8 +18,12 @@ export function GameBoard({ state, myId, opponentId, submitting, onSubmit }: Gam
       return (
         <TrustOrBetrayBoard
           myId={myId}
+          opponentId={opponentId}
+          phase={state.phase}
+          declarations={state.declarations}
           pendingActions={state.pendingActions}
           submitting={submitting}
+          onDeclare={(choice) => onSubmit("DECLARE", { choice })}
           onChoose={(choice) => onSubmit("CHOOSE", { choice })}
         />
       );
@@ -40,8 +44,12 @@ export function GameBoard({ state, myId, opponentId, submitting, onSubmit }: Gam
       return (
         <FinalPredictionBoard
           myId={myId}
+          opponentId={opponentId}
+          phase={state.phase}
+          declarations={state.declarations}
           pendingActions={state.pendingActions}
           submitting={submitting}
+          onDeclare={(move) => onSubmit("DECLARE", { move })}
           onChoose={(move) => onSubmit("CHOOSE", { move })}
         />
       );

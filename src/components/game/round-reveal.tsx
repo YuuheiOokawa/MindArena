@@ -111,9 +111,31 @@ function SideBySide({
   );
 }
 
+/** Shared "declared X, actually played Y" note for the 3 games that now have a bluffable
+ * declare-then-lock-in step (TRUST OR BETRAY, MINORITY CHOICE, FINAL PREDICTION). */
+function DeclareVsActualNote({
+  who,
+  declaredLabel,
+  actualLabel,
+}: {
+  who: "あなた" | "相手";
+  declaredLabel?: string;
+  actualLabel?: string;
+}) {
+  if (!declaredLabel) return null;
+  const bluffed = actualLabel !== undefined && declaredLabel !== actualLabel;
+  return (
+    <p>
+      {who}は「{declaredLabel}」と宣言{bluffed ? `し、実際は「${actualLabel}」を選びました（ブラフ）` : "し、その通り選びました"}。
+    </p>
+  );
+}
+
 function TrustOrBetrayReveal({ entry, myId, opponentId }: { entry: RoundEntry; myId: string; opponentId: string }) {
   const myChoice = entry.actions[myId]?.actionData?.choice as "TRUST" | "BETRAY" | undefined;
   const oppChoice = entry.actions[opponentId]?.actionData?.choice as "TRUST" | "BETRAY" | undefined;
+  const myDeclared = entry.declarations?.[myId]?.actionData?.choice as "TRUST" | "BETRAY" | undefined;
+  const oppDeclared = entry.declarations?.[opponentId]?.actionData?.choice as "TRUST" | "BETRAY" | undefined;
 
   const narrative =
     myChoice === "TRUST" && oppChoice === "TRUST"
@@ -124,6 +146,8 @@ function TrustOrBetrayReveal({ entry, myId, opponentId }: { entry: RoundEntry; m
           ? "あなたは信頼を選び、相手に裏切られました。"
           : "あなたは裏切り、相手を出し抜きました。";
 
+  const label = (choice?: "TRUST" | "BETRAY") => (choice === "TRUST" ? "信頼" : choice === "BETRAY" ? "裏切り" : undefined);
+
   return (
     <>
       <SideBySide
@@ -132,6 +156,12 @@ function TrustOrBetrayReveal({ entry, myId, opponentId }: { entry: RoundEntry; m
         myIcon={myChoice === "TRUST" ? <Handshake className="h-5 w-5" /> : <Swords className="h-5 w-5" />}
         oppIcon={oppChoice === "TRUST" ? <Handshake className="h-5 w-5" /> : <Swords className="h-5 w-5" />}
       />
+      {(myDeclared || oppDeclared) && (
+        <div className="flex flex-col gap-1 text-center text-[11px] text-arena-silver">
+          <DeclareVsActualNote who="あなた" declaredLabel={label(myDeclared)} actualLabel={label(myChoice)} />
+          <DeclareVsActualNote who="相手" declaredLabel={label(oppDeclared)} actualLabel={label(oppChoice)} />
+        </div>
+      )}
       <p className="text-center text-xs text-arena-silver">{narrative}</p>
     </>
   );
@@ -242,8 +272,6 @@ function MinorityChoiceReveal({
   const totalB = crowd.bCount + (myChoice === "B" ? 1 : 0) + (oppChoice === "B" ? 1 : 0);
   const total = totalA + totalB || 1;
   const minoritySide = totalA === totalB ? null : totalA < totalB ? "A" : "B";
-  const oppBluffed = oppDeclared && oppChoice && oppDeclared !== oppChoice;
-  const iBluffed = myDeclared && myChoice && myDeclared !== myChoice;
 
   return (
     <div className="flex flex-col gap-3">
@@ -255,8 +283,8 @@ function MinorityChoiceReveal({
       />
       {(myDeclared || oppDeclared) && (
         <div className="flex flex-col gap-1 text-center text-[11px] text-arena-silver">
-          {myDeclared && <p>あなたは「{myDeclared}」と宣言{iBluffed ? `し、実際は「${myChoice}」を選びました（ブラフ）` : "し、その通り選びました"}。</p>}
-          {oppDeclared && <p>相手は「{oppDeclared}」と宣言{oppBluffed ? `し、実際は「${oppChoice}」を選びました（ブラフ）` : "し、その通り選びました"}。</p>}
+          <DeclareVsActualNote who="あなた" declaredLabel={myDeclared} actualLabel={myChoice} />
+          <DeclareVsActualNote who="相手" declaredLabel={oppDeclared} actualLabel={oppChoice} />
         </div>
       )}
       <div>
@@ -279,6 +307,8 @@ function MinorityChoiceReveal({
 function FinalPredictionReveal({ entry, myId, opponentId }: { entry: RoundEntry; myId: string; opponentId: string }) {
   const myMove = entry.actions[myId]?.actionData?.move as FinalPredictionMove | undefined;
   const oppMove = entry.actions[opponentId]?.actionData?.move as FinalPredictionMove | undefined;
+  const myDeclared = entry.declarations?.[myId]?.actionData?.move as FinalPredictionMove | undefined;
+  const oppDeclared = entry.declarations?.[opponentId]?.actionData?.move as FinalPredictionMove | undefined;
 
   const moveIcon = (move?: FinalPredictionMove) => {
     if (move === "STRIKE") return <Zap className="h-5 w-5" />;
@@ -296,6 +326,8 @@ function FinalPredictionReveal({ entry, myId, opponentId }: { entry: RoundEntry;
           ? `${FINAL_PREDICTION_MOVE_LABELS[myMove].label}は${FINAL_PREDICTION_MOVE_LABELS[oppMove].label}に勝ちました。`
           : `${FINAL_PREDICTION_MOVE_LABELS[oppMove].label}に${FINAL_PREDICTION_MOVE_LABELS[myMove].label}が読まれました。`;
 
+  const label = (move?: FinalPredictionMove) => (move ? FINAL_PREDICTION_MOVE_LABELS[move].label : undefined);
+
   return (
     <>
       <SideBySide
@@ -304,6 +336,12 @@ function FinalPredictionReveal({ entry, myId, opponentId }: { entry: RoundEntry;
         myIcon={moveIcon(myMove)}
         oppIcon={moveIcon(oppMove)}
       />
+      {(myDeclared || oppDeclared) && (
+        <div className="flex flex-col gap-1 text-center text-[11px] text-arena-silver">
+          <DeclareVsActualNote who="あなた" declaredLabel={label(myDeclared)} actualLabel={label(myMove)} />
+          <DeclareVsActualNote who="相手" declaredLabel={label(oppDeclared)} actualLabel={label(oppMove)} />
+        </div>
+      )}
       <p className="text-center text-xs text-arena-silver">{narrative}</p>
     </>
   );
