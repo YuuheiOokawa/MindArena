@@ -12,6 +12,7 @@ import { RoundTimer } from "@/components/game/round-timer";
 import { RoundHistoryStrip } from "@/components/game/round-history-strip";
 import { RoundReveal } from "@/components/game/round-reveal";
 import { DEFAULT_GAME_TIMERS } from "@/config/timers";
+import { LogOut } from "lucide-react";
 
 interface RoundEntry {
   round: number;
@@ -50,6 +51,7 @@ function GamePlaySession({ id, matchId }: { id: string; matchId: string }) {
   const [revealEntry, setRevealEntry] = useState<RoundEntry | null>(null);
   const [isFinalReveal, setIsFinalReveal] = useState(false);
   const [retryToken, setRetryToken] = useState(0);
+  const [withdrawing, setWithdrawing] = useState(false);
   const navigatedRef = useRef(false);
   const shownRoundsRef = useRef<Set<number>>(new Set());
   // The background poll's setTimeout loop is created once and doesn't re-run per render, so it
@@ -168,9 +170,34 @@ function GamePlaySession({ id, matchId }: { id: string; matchId: string }) {
     }
   }
 
+  async function handleWithdraw() {
+    if (!window.confirm("この対戦を棄権しますか？相手の勝利となり、この操作は取り消せません。")) return;
+    setWithdrawing(true);
+    try {
+      await apiClient.post(`/api/tournaments/${id}/withdraw`);
+      navigatedRef.current = true;
+      router.push("/home");
+    } catch (e) {
+      setError(e instanceof ApiClientError ? e.message : "棄権に失敗しました。");
+      setWithdrawing(false);
+    }
+  }
+
+  const withdrawButton = (
+    <button
+      type="button"
+      onClick={handleWithdraw}
+      disabled={withdrawing}
+      aria-label="この対戦を棄権する"
+      className="flex h-11 w-11 items-center justify-center rounded-full text-arena-silver/70 hover:text-arena-danger disabled:opacity-50"
+    >
+      <LogOut className="h-4 w-4" />
+    </button>
+  );
+
   if (error) {
     return (
-      <AppScreen header={<FocusHeader title="対戦中" />}>
+      <AppScreen header={<FocusHeader title="対戦中" rightAction={withdrawButton} />}>
         <ErrorState
           message={error}
           onRetry={() => {
@@ -181,14 +208,14 @@ function GamePlaySession({ id, matchId }: { id: string; matchId: string }) {
       </AppScreen>
     );
   }
-  if (!state || !myParticipantId) return <AppScreen header={<FocusHeader title="対戦中" />}><LoadingState label="対戦を準備しています…" /></AppScreen>;
+  if (!state || !myParticipantId) return <AppScreen header={<FocusHeader title="対戦中" rightAction={withdrawButton} />}><LoadingState label="対戦を準備しています…" /></AppScreen>;
 
   const myScore = state.scores[myParticipantId] ?? 0;
   const oppScore = opponentId ? state.scores[opponentId] ?? 0 : 0;
   const phaseKey = `${state.round}-${(state as { phase?: string }).phase ?? ""}`;
 
   return (
-    <AppScreen header={<FocusHeader title={gameName} />}>
+    <AppScreen header={<FocusHeader title={gameName} rightAction={revealEntry ? undefined : withdrawButton} />}>
       <div className="flex flex-1 flex-col gap-5 px-4 pb-8 pt-4">
         <div className="flex items-center justify-between">
           <p className="text-xs text-arena-silver">
