@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LeagueBadgeIcon } from "@/components/common/league-badge-icon";
 import { cn } from "@/lib/utils/cn";
+import { Trophy } from "lucide-react";
 
 export default async function LeaguesPage() {
   const session = await auth();
@@ -21,9 +22,18 @@ export default async function LeaguesPage() {
   return (
     <AppScreen nav>
       <div className="flex flex-col gap-4 px-4 pb-8 pt-6">
-        <header>
-          <h1 className="text-lg font-bold text-arena-white">リーグ一覧</h1>
-          <p className="text-xs text-arena-silver">ポイントを貯めて上位リーグを解放しよう。</p>
+        <header className="flex items-center justify-between gap-2">
+          <div>
+            <h1 className="text-lg font-bold text-arena-white">リーグ一覧</h1>
+            <p className="text-xs text-arena-silver">ポイントを貯めて上位リーグを解放しよう。</p>
+          </div>
+          <Link
+            href="/leaderboard"
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-arena-gold/30 bg-arena-gold/10 px-3 py-1.5 text-xs font-medium text-arena-gold-soft"
+          >
+            <Trophy className="h-3.5 w-3.5" />
+            ランキング
+          </Link>
         </header>
 
         <div className="flex flex-col gap-2">

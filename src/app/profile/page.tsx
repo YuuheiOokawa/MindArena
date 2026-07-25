@@ -131,6 +131,7 @@ export default async function ProfilePage() {
         </Card>
 
         <div className="flex flex-col gap-2">
+          <ProfileLinkRow href="/leaderboard" icon={Trophy} label="ランキング" />
           <ProfileLinkRow href="/shop" icon={ShoppingBag} label="ショップ" />
           <ProfileLinkRow href="/friends" icon={Users} label="フレンド" />
           <ProfileLinkRow href="/how-to-play" icon={BookOpen} label="遊び方" />

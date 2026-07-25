@@ -49,9 +49,12 @@ export default async function HomePage() {
             <span className="text-sm font-bold tracking-wide text-arena-white">{APP_CONFIG.title}</span>
           </div>
           <div className="flex items-center gap-1">
-            <button className="flex h-9 w-9 items-center justify-center rounded-full text-arena-silver/80 hover:text-arena-white">
+            <a
+              href="#announcements"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-arena-silver/80 hover:text-arena-white"
+            >
               <Bell className="h-4 w-4" />
-            </button>
+            </a>
             <Link
               href="/friends"
               className="relative flex h-9 w-9 items-center justify-center rounded-full text-arena-silver/80 hover:text-arena-white"
@@ -150,7 +153,7 @@ export default async function HomePage() {
           )}
         </section>
 
-        <section className="flex flex-col gap-2">
+        <section id="announcements" className="flex flex-col gap-2 scroll-mt-4">
           <h2 className="text-sm font-semibold text-arena-silver">お知らせ</h2>
           {ANNOUNCEMENTS.length === 0 ? (
             <EmptyState icon={Megaphone} title="現在お知らせはありません" />

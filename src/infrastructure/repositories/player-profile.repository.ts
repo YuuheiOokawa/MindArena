@@ -34,4 +34,27 @@ export const playerProfileRepository = {
       ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
     });
   },
+
+  /** Top players by totalPoints — leaderboard read model (docs/15_FUTURE_ROADMAP.md: no
+   * write-path changes needed, totalPoints already aggregates everything this needs). Scoped to
+   * `leagueId` when given (a player's own-league standings), otherwise global. */
+  async listTopByPoints(limit: number, leagueId?: string) {
+    return prisma.playerProfile.findMany({
+      where: leagueId ? { currentLeagueId: leagueId } : undefined,
+      orderBy: [{ totalPoints: "desc" }, { id: "asc" }],
+      take: limit,
+      include: { currentLeague: true },
+    });
+  },
+
+  /** Count of players strictly ahead of `points` — rank = this + 1 (ties share a rank). */
+  async countAbovePoints(points: number, leagueId?: string) {
+    return prisma.playerProfile.count({
+      where: { totalPoints: { gt: points }, ...(leagueId ? { currentLeagueId: leagueId } : {}) },
+    });
+  },
+
+  async countAll(leagueId?: string) {
+    return prisma.playerProfile.count({ where: leagueId ? { currentLeagueId: leagueId } : undefined });
+  },
 };
