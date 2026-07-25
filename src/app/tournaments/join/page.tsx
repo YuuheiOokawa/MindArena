@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dices, Lock, UserPlus, Users } from "lucide-react";
 import Link from "next/link";
+import { LeagueBadgeIcon } from "@/components/common/league-badge-icon";
+import { cn } from "@/lib/utils/cn";
 
 interface LeagueSummary {
   id: string;
@@ -20,6 +22,7 @@ interface LeagueSummary {
   requiredPoints: number;
   championReward: number;
   botDifficulty: string;
+  themeKey: string;
   unlocked: boolean;
 }
 
@@ -75,11 +78,14 @@ function LeaguePicker() {
               >
                 <Card>
                   <CardContent className="flex items-center justify-between py-3.5">
-                    <div>
-                      <p className="text-sm font-semibold text-arena-white">{league.displayName}</p>
-                      <p className="text-xs text-arena-silver">優勝報酬 {league.championReward.toLocaleString()} pt</p>
+                    <div className="flex items-center gap-3">
+                      <LeagueBadgeIcon themeKey={league.themeKey} className={cn("h-8 w-8", !league.unlocked && "opacity-30 grayscale")} />
+                      <div>
+                        <p className="text-sm font-semibold text-arena-white">{league.displayName}</p>
+                        <p className="text-xs text-arena-silver">優勝報酬 {league.championReward.toLocaleString()} pt</p>
+                      </div>
                     </div>
-                    {!league.unlocked && <Lock className="h-4 w-4 text-arena-silver/60" />}
+                    {!league.unlocked && <Lock className="h-4 w-4 shrink-0 text-arena-silver/60" />}
                   </CardContent>
                 </Card>
               </button>
@@ -132,9 +138,12 @@ function JoinConfirm({ leagueId }: { leagueId: string }) {
   return (
     <AppScreen nav>
       <div className="flex flex-col gap-4 px-4 pb-8 pt-6">
-        <header>
-          <h1 className="text-lg font-bold text-arena-white">{league.displayName}</h1>
-          <p className="text-xs text-arena-silver">{league.description}</p>
+        <header className="flex items-center gap-3">
+          <LeagueBadgeIcon themeKey={league.themeKey} className="h-12 w-12" />
+          <div>
+            <h1 className="text-lg font-bold text-arena-white">{league.displayName}</h1>
+            <p className="text-xs text-arena-silver">{league.description}</p>
+          </div>
         </header>
 
         <Card>

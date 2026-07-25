@@ -8,6 +8,7 @@ import { FocusHeader } from "@/components/layout/focus-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LeagueBadgeIcon } from "@/components/common/league-badge-icon";
 
 export default async function LeagueDetailPage({ params }: { params: Promise<{ leagueId: string }> }) {
   const { leagueId } = await params;
@@ -22,6 +23,9 @@ export default async function LeagueDetailPage({ params }: { params: Promise<{ l
   return (
     <AppScreen header={<FocusHeader title={league.displayName} backHref="/leagues" />}>
       <div className="flex flex-col gap-4 px-4 pb-8 pt-4">
+        <div className="flex justify-center">
+          <LeagueBadgeIcon themeKey={league.themeKey} className={league.unlocked ? "h-28 w-28" : "h-28 w-28 opacity-30 grayscale"} />
+        </div>
         <Badge variant={league.unlocked ? "success" : "neutral"} className="w-fit">
           {league.unlocked ? "解放済み" : `必要ポイント ${league.requiredPoints.toLocaleString()}`}
         </Badge>

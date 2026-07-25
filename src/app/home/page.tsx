@@ -14,11 +14,11 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Bell, Bot, Coins, Gem, Mail, Megaphone, Swords, Trophy } from "lucide-react";
+import { Bell, Bot, Coins, Mail, Megaphone, Swords, Trophy } from "lucide-react";
 import { resumeHref } from "@/features/tournaments/resume-href";
 import { APP_CONFIG } from "@/config/app";
 import { PlayerAvatar } from "@/components/common/player-avatar";
-import { getLeagueBadgeColor } from "@/config/league-visuals";
+import { LeagueBadgeIcon } from "@/components/common/league-badge-icon";
 
 export default async function HomePage() {
   const session = await auth();
@@ -75,7 +75,7 @@ export default async function HomePage() {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-base font-bold text-arena-white">{profile.displayName}</p>
                 <Badge variant="primary" className="mt-1 gap-1">
-                  <Gem className={`h-3 w-3 ${getLeagueBadgeColor(profile.league.current.themeKey)}`} />
+                  <LeagueBadgeIcon themeKey={profile.league.current.themeKey} />
                   {profile.league.current.displayName}
                 </Badge>
               </div>

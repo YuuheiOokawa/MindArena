@@ -12,11 +12,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, Lock, Users } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { LeagueBadgeIcon } from "@/components/common/league-badge-icon";
 
 interface LeagueSummary {
   id: string;
   displayName: string;
   requiredPoints: number;
+  themeKey: string;
   unlocked: boolean;
 }
 
@@ -69,8 +71,11 @@ function LeaguePicker() {
               >
                 <Card>
                   <CardContent className="flex items-center justify-between py-3.5">
-                    <p className="text-sm font-semibold text-arena-white">{league.displayName}</p>
-                    {!league.unlocked && <Lock className="h-4 w-4 text-arena-silver/60" />}
+                    <div className="flex items-center gap-3">
+                      <LeagueBadgeIcon themeKey={league.themeKey} className={cn("h-8 w-8", !league.unlocked && "opacity-30 grayscale")} />
+                      <p className="text-sm font-semibold text-arena-white">{league.displayName}</p>
+                    </div>
+                    {!league.unlocked && <Lock className="h-4 w-4 shrink-0 text-arena-silver/60" />}
                   </CardContent>
                 </Card>
               </button>

@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Lock, LockOpen } from "lucide-react";
 import { auth } from "@/infrastructure/auth/auth";
 import { listLeaguesWithUnlockStatus } from "@/features/leagues/league.service";
 import { playerProfileRepository } from "@/infrastructure/repositories/player-profile.repository";
 import { AppScreen } from "@/components/layout/app-screen";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { LeagueBadgeIcon } from "@/components/common/league-badge-icon";
+import { cn } from "@/lib/utils/cn";
 
 export default async function LeaguesPage() {
   const session = await auth();
@@ -31,8 +32,11 @@ export default async function LeaguesPage() {
               <Card className={league.unlocked ? "" : "opacity-60"}>
                 <CardContent className="flex items-center justify-between py-3.5">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-arena-border bg-arena-surface-2 text-arena-gold">
-                      {league.unlocked ? <LockOpen className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-arena-border bg-arena-surface-2">
+                      <LeagueBadgeIcon
+                        themeKey={league.themeKey}
+                        className={cn("h-8 w-8", !league.unlocked && "opacity-30 grayscale")}
+                      />
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-arena-white">{league.displayName}</p>

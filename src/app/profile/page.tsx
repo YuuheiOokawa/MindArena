@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { BookOpen, Coins, Crown, Eye, Flame, Gem, Pencil, Settings, Shield, ShoppingBag, Skull, Sparkles, Star, Trophy, Users, Zap } from "lucide-react";
 import { TITLES } from "@/config/titles";
 import { BACKGROUND_GRADIENTS, BADGE_ICON_KEYS } from "@/config/shop-items";
-import { getLeagueBadgeColor } from "@/config/league-visuals";
+import { LeagueBadgeIcon } from "@/components/common/league-badge-icon";
 import { cn } from "@/lib/utils/cn";
 import type { LucideIcon } from "lucide-react";
 
@@ -92,7 +92,7 @@ export default async function ProfilePage() {
             <Badge variant="gold">{title.name}</Badge>
             <div className="flex items-center gap-2">
               <Badge variant="primary">
-                <Gem className={`h-3 w-3 ${getLeagueBadgeColor(profile.league.current.themeKey)}`} />
+                <LeagueBadgeIcon themeKey={profile.league.current.themeKey} />
                 {profile.league.current.displayName}
               </Badge>
               <Badge variant="neutral">
@@ -137,7 +137,10 @@ export default async function ProfilePage() {
                     trophy ? "border-arena-gold/40 bg-arena-gold/10" : "border-arena-border bg-arena-surface-2/40",
                   )}
                 >
-                  <Trophy className={cn("h-5 w-5", trophy ? "text-arena-gold" : "text-arena-silver/25")} />
+                  <LeagueBadgeIcon
+                    themeKey={league.themeKey}
+                    className={cn("h-7 w-7", !trophy && "opacity-25 grayscale")}
+                  />
                   <span className="max-w-full truncate px-1 text-[9px] text-arena-silver/70">{league.displayName.replace("リーグ", "")}</span>
                   {trophy && trophy.count > 1 && (
                     <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-arena-gold px-1 text-[9px] font-bold text-arena-bg">

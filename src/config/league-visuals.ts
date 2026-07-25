@@ -1,5 +1,5 @@
-/** Per-league badge color, keyed by LeagueConfig.themeKey. All tiers share the same Gem icon
- * (see home/profile pages) — only the tint changes, echoing a gemstone-rarity progression. */
+/** Per-league badge color, keyed by LeagueConfig.themeKey — used as an accent/glow tint
+ * alongside the real badge artwork below. */
 export const LEAGUE_BADGE_COLOR: Record<string, string> = {
   bronze: "text-amber-700",
   silver: "text-slate-300",
@@ -15,4 +15,22 @@ export const LEAGUE_BADGE_COLOR: Record<string, string> = {
 
 export function getLeagueBadgeColor(themeKey: string): string {
   return LEAGUE_BADGE_COLOR[themeKey] ?? "text-arena-primary-soft";
+}
+
+/** Per-league badge artwork, keyed by LeagueConfig.themeKey. Files live under public/leagues/. */
+export const LEAGUE_BADGE_ICON: Record<string, string> = {
+  bronze: "/leagues/bronze.png",
+  silver: "/leagues/silver.png",
+  gold: "/leagues/gold.png",
+  platinum: "/leagues/platinum.png",
+  diamond: "/leagues/diamond.png",
+  master: "/leagues/master.png",
+  "grand-master": "/leagues/grand-master.png",
+  emperor: "/leagues/emperor.png",
+  legend: "/leagues/legend.png",
+  "mind-king": "/leagues/mind-king.png",
+};
+
+export function getLeagueBadgeIcon(themeKey: string): string | null {
+  return LEAGUE_BADGE_ICON[themeKey] ?? null;
 }

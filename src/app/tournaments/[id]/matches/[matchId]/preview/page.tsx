@@ -13,8 +13,8 @@ import { Button } from "@/components/ui/button";
 import { GameRulesCard } from "@/components/common/game-rules-card";
 import { PlayerAvatar } from "@/components/common/player-avatar";
 import { getGameMeta } from "@/config/games";
-import { getLeagueBadgeColor } from "@/config/league-visuals";
-import { Bot, Dices, Gem } from "lucide-react";
+import { LeagueBadgeIcon } from "@/components/common/league-badge-icon";
+import { Bot, Dices } from "lucide-react";
 
 interface MatchPreview {
   matchId: string;
@@ -95,7 +95,7 @@ function PreMatchSession({ id, matchId }: { id: string; matchId: string }) {
               <p className="max-w-24 truncate text-sm font-semibold text-arena-white">{preview.me.displayName}</p>
               {preview.me.leagueName && (
                 <Badge variant="primary">
-                  <Gem className={`h-3 w-3 ${getLeagueBadgeColor(preview.me.leagueThemeKey ?? "")}`} />
+                  <LeagueBadgeIcon themeKey={preview.me.leagueThemeKey ?? ""} />
                   {preview.me.leagueName}
                 </Badge>
               )}
@@ -119,7 +119,7 @@ function PreMatchSession({ id, matchId }: { id: string; matchId: string }) {
               <p className="max-w-24 truncate text-sm font-semibold text-arena-white">{preview.opponent.displayName}</p>
               {preview.opponent.leagueName && (
                 <Badge variant="neutral">
-                  <Gem className={`h-3 w-3 ${getLeagueBadgeColor(preview.opponent.leagueThemeKey ?? "")}`} />
+                  <LeagueBadgeIcon themeKey={preview.opponent.leagueThemeKey ?? ""} />
                   {preview.opponent.leagueName}
                 </Badge>
               )}
