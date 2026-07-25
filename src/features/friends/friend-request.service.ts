@@ -13,7 +13,7 @@ async function requireProfile(userId: string) {
 export async function sendFriendRequest(userId: string, targetUsername: string) {
   const profile = await requireProfile(userId);
 
-  const targetUser = await userRepository.findByUsername(targetUsername);
+  const targetUser = await userRepository.findByUsernameCaseInsensitive(targetUsername);
   if (!targetUser) throw new AppError("NOT_FOUND", "そのユーザー名のプレイヤーは見つかりませんでした。");
 
   const targetProfile = await playerProfileRepository.findByUserId(targetUser.id);

@@ -32,7 +32,7 @@ export async function listOutgoingFriendRequests(userId: string) {
 /** Looks up a player by exact username so a request can be sent; excludes the caller and reveals no unrelated accounts. */
 export async function searchPlayerByUsername(userId: string, username: string) {
   const profile = await requireProfile(userId);
-  const targetUser = await userRepository.findByUsername(username);
+  const targetUser = await userRepository.findByUsernameCaseInsensitive(username);
   if (!targetUser) throw new AppError("NOT_FOUND", "そのユーザー名のプレイヤーは見つかりませんでした。");
 
   const targetProfile = await playerProfileRepository.findByUserId(targetUser.id);

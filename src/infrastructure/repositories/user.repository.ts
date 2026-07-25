@@ -14,6 +14,13 @@ export const userRepository = {
     return prisma.user.findUnique({ where: { username } });
   },
 
+  /** Case-insensitive lookup for user-facing username search (friend search, add-by-username) —
+   * usernames are stored with whatever casing the owner registered with, but players shouldn't
+   * need to remember it exactly to find each other. */
+  async findByUsernameCaseInsensitive(username: string) {
+    return prisma.user.findFirst({ where: { username: { equals: username, mode: "insensitive" } } });
+  },
+
   async findByEmail(email: string) {
     return prisma.user.findUnique({ where: { email } });
   },

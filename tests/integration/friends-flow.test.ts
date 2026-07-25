@@ -66,6 +66,12 @@ describe("friend request lifecycle", () => {
     expect(result.displayName).toBe(BOB_USERNAME);
   });
 
+  it("finds the other player regardless of the casing used to search", async () => {
+    const result = await searchPlayerByUsername(aliceUserId, BOB_USERNAME.toUpperCase());
+    expect(result.relation).toBe("NONE");
+    expect(result.displayName).toBe(BOB_USERNAME);
+  });
+
   it("rejects a self-friend request", async () => {
     await expect(sendFriendRequest(aliceUserId, ALICE_USERNAME)).rejects.toThrow(AppError);
   });
