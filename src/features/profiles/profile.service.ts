@@ -4,8 +4,11 @@ import { leagueTrophyRepository } from "@/infrastructure/repositories/league-tro
 import { cosmeticItemRepository } from "@/infrastructure/repositories/cosmetic-item.repository";
 import { getLeagueProgress } from "@/domain/services/league-progress.service";
 import { resolveFrameTier, resolveNextFrameTier } from "@/domain/services/profile-decoration.service";
+import { getUnlockedTitleIds } from "@/domain/services/title-unlock.service";
 import { calculateWinRate } from "@/domain/services/win-rate.util";
+import { computeTitleUnlockStats } from "./title-unlock-stats";
 import { FRAME_TIERS } from "@/config/frames";
+import { TITLES } from "@/config/titles";
 import { AppError } from "@/lib/errors/app-error";
 
 export async function getMyProfile(userId: string) {
@@ -13,11 +16,13 @@ export async function getMyProfile(userId: string) {
   if (!profile) throw new AppError("NOT_FOUND", "プロフィールが見つかりません。");
 
   const equippedIds = [profile.selectedBackgroundId, profile.selectedBadgeId].filter((id): id is string => Boolean(id));
-  const [leagues, trophies, equippedItems] = await Promise.all([
+  const [leagues, trophies, equippedItems, titleStats] = await Promise.all([
     leagueRepository.findAllActive(),
     leagueTrophyRepository.listForPlayer(profile.id),
     equippedIds.length > 0 ? cosmeticItemRepository.findManyByIds(equippedIds) : Promise.resolve([]),
+    computeTitleUnlockStats(profile),
   ]);
+  const unlockedTitleIds = getUnlockedTitleIds(TITLES.map((t) => t.id), titleStats);
 
   const progress = getLeagueProgress(profile.totalPoints, leagues);
   const frame = resolveFrameTier(profile.totalPoints, FRAME_TIERS);
@@ -41,6 +46,7 @@ export async function getMyProfile(userId: string) {
     tournamentWins: profile.tournamentWins,
     finalsReached: profile.finalsReached,
     selectedTitleId: profile.selectedTitleId,
+    unlockedTitleIds,
     selectedFrameId: profile.selectedFrameId,
     selectedBackgroundId: profile.selectedBackgroundId,
     selectedBadgeId: profile.selectedBadgeId,

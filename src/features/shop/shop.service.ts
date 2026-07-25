@@ -52,13 +52,28 @@ export async function purchaseShopItem(userId: string, cosmeticItemId: string) {
 
   if (profile.prizeCurrency < item.price) throw new AppError("INSUFFICIENT_FUNDS");
 
-  await prisma.$transaction(async (tx) => {
-    await tx.playerProfile.update({
-      where: { id: profile.id },
-      data: { prizeCurrency: { decrement: item.price! } },
+  try {
+    await prisma.$transaction(async (tx) => {
+      // A conditional UPDATE (not a plain decrement) so two concurrent purchases racing the same
+      // balance can't both succeed: the second one's WHERE re-evaluates against the row AFTER
+      // the first commits and correctly sees the now-lower balance, rather than both reading the
+      // same stale `profile.prizeCurrency` snapshot from above and both passing the check.
+      const debited = await tx.playerProfile.updateMany({
+        where: { id: profile.id, prizeCurrency: { gte: item.price! } },
+        data: { prizeCurrency: { decrement: item.price! } },
+      });
+      if (debited.count === 0) throw new AppError("INSUFFICIENT_FUNDS");
+
+      await tx.cosmeticPurchase.create({ data: { playerProfileId: profile.id, cosmeticItemId } });
     });
-    await tx.cosmeticPurchase.create({ data: { playerProfileId: profile.id, cosmeticItemId } });
-  });
+  } catch (error) {
+    // The same item purchased twice in the same instant hits @@unique([playerProfileId,
+    // cosmeticItemId]) inside the transaction — the whole transaction (including the debit)
+    // rolls back automatically, so translate that into the same friendly error the upfront
+    // check above would have given a non-racing caller, instead of a raw 500.
+    if (error instanceof AppError) throw error;
+    throw new AppError("ALREADY_OWNED");
+  }
 
   return { purchased: true, itemId: cosmeticItemId };
 }

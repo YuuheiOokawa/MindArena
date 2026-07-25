@@ -41,6 +41,22 @@ export const tournamentInviteRepository = {
     });
   },
 
+  /** Declines any still-PENDING invite between two profiles regardless of direction — called
+   * when the friendship itself is removed, so accepting can't create a real tournament between
+   * two accounts that are no longer friends. */
+  async declinePendingBetween(profileIdA: string, profileIdB: string) {
+    await prisma.tournamentInvite.updateMany({
+      where: {
+        status: TournamentInviteStatus.PENDING,
+        OR: [
+          { inviterId: profileIdA, inviteeId: profileIdB },
+          { inviterId: profileIdB, inviteeId: profileIdA },
+        ],
+      },
+      data: { status: TournamentInviteStatus.DECLINED },
+    });
+  },
+
   async listIncomingPending(inviteeId: string) {
     return prisma.tournamentInvite.findMany({
       where: { inviteeId, status: TournamentInviteStatus.PENDING },

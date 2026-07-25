@@ -5,11 +5,12 @@ import { tournamentInviteRepository } from "@/infrastructure/repositories/tourna
 import { playerProfileRepository } from "@/infrastructure/repositories/player-profile.repository";
 import { friendshipRepository } from "@/infrastructure/repositories/friendship.repository";
 import { leagueRepository } from "@/infrastructure/repositories/league.repository";
+import { withKeysLock, withKeyLock } from "@/infrastructure/repositories/advisory-lock.repository";
 import { toFriendCard } from "@/features/friends/friend-card.mapper";
 import { fillWithBots } from "./bot-fill.service";
 import { generateBracketForTournament } from "./progress.service";
 import { awardPoints } from "@/features/points/award-points.service";
-import { ParticipantType, PointReason, TournamentStatus, type BotDifficulty } from "@/domain/enums";
+import { ParticipantType, PointReason, FriendshipStatus, TournamentStatus, type BotDifficulty } from "@/domain/enums";
 import { RECRUITING_WINDOW_SECONDS } from "@/config/tournament";
 import { AppError } from "@/lib/errors/app-error";
 
@@ -38,14 +39,18 @@ export async function findInvitableFriends(profileId: string, league: { required
 }
 
 /** Finalizes a RECRUITING tournament: BOT-fills whatever's left, generates the bracket, and
- * expires any invites nobody responded to in time. */
+ * expires any invites nobody responded to in time. Locked on the tournament id so two viewers
+ * polling the same tournament at the moment it becomes due (very plausible — every participant's
+ * matchmaking page polls independently) can't both bot-fill and generate the bracket twice. */
 export async function finalizeRecruitingTournament(tournamentId: string) {
-  const tournament = await tournamentRepository.findById(tournamentId);
-  if (!tournament || tournament.status !== TournamentStatus.RECRUITING) return;
+  await withKeyLock(tournamentId, async () => {
+    const tournament = await tournamentRepository.findById(tournamentId);
+    if (!tournament || tournament.status !== TournamentStatus.RECRUITING) return;
 
-  await fillWithBots(tournamentId, tournament.league.botDifficulty as BotDifficulty, tournament.maxPlayers);
-  await generateBracketForTournament(tournamentId);
-  await tournamentInviteRepository.expireAllPending(tournamentId);
+    await fillWithBots(tournamentId, tournament.league.botDifficulty as BotDifficulty, tournament.maxPlayers);
+    await generateBracketForTournament(tournamentId);
+    await tournamentInviteRepository.expireAllPending(tournamentId);
+  });
 }
 
 /** Called opportunistically whenever a RECRUITING tournament is viewed (matchmaking/bracket
@@ -98,50 +103,74 @@ export async function acceptTournamentInvite(userId: string, inviteId: string) {
   if (!invite || invite.inviteeId !== profile.id) throw new AppError("NOT_FOUND", "招待が見つかりませんでした。");
   if (invite.status !== "PENDING") throw new AppError("CONFLICT", "この招待はすでに処理されています。");
 
-  const active = await tournamentRepository.findActiveForPlayer(profile.id);
-  if (active) throw new AppError("TOURNAMENT_NOT_JOINABLE", "すでに別のトーナメントに参加中です。");
+  // Locked on BOTH the invitee's own id (so they can't accept two different invites at once —
+  // that would violate "one active tournament" the same way a double-join would) AND the
+  // tournament's id (so this can't race the last seat against another invitee's accept, or
+  // against finalizeIfDue's own bot-fill, all of which share this same lock key). finalizeIfDue
+  // takes that same tournament-id lock internally, so — same reasoning as joinTournament — it's
+  // called AFTER this one releases below, never from inside it (that would self-deadlock).
+  const tournamentId = await withKeysLock([profile.id, invite.tournamentId], async () => {
+    const freshInvite = await tournamentInviteRepository.findById(inviteId);
+    if (!freshInvite || freshInvite.status !== "PENDING") {
+      throw new AppError("CONFLICT", "この招待はすでに処理されています。");
+    }
 
-  const tournament = await tournamentRepository.findById(invite.tournamentId);
-  if (!tournament || tournament.status !== TournamentStatus.RECRUITING) {
-    throw new AppError("TOURNAMENT_NOT_JOINABLE", "この大会はすでに開始・終了しています。");
-  }
-  if (tournament.participants.length >= tournament.maxPlayers) {
-    throw new AppError("TOURNAMENT_NOT_JOINABLE", "この大会はすでに満員です。");
-  }
+    // A friendship removed after the invite was sent shouldn't still let a real tournament (with
+    // real point payouts) get created between two accounts that are, per the friends list,
+    // strangers again.
+    const friendship = await friendshipRepository.findBetween(profile.id, freshInvite.inviterId);
+    if (!friendship || friendship.status !== FriendshipStatus.ACCEPTED) {
+      throw new AppError("NOT_FOUND", "招待した相手とはすでにフレンドではありません。");
+    }
 
-  const league = await leagueRepository.findById(tournament.leagueId);
-  if (!league) throw new AppError("NOT_FOUND", "リーグが見つかりません。");
-  if (profile.totalPoints < league.requiredPoints) {
-    throw new AppError("TOURNAMENT_NOT_JOINABLE", "このリーグはまだ解放されていません。");
-  }
+    const active = await tournamentRepository.findActiveForPlayer(profile.id);
+    if (active) throw new AppError("TOURNAMENT_NOT_JOINABLE", "すでに別のトーナメントに参加中です。");
 
-  await tournamentParticipantRepository.createMany([
-    {
-      tournamentId: tournament.id,
-      playerId: profile.id,
-      type: ParticipantType.HUMAN,
-      displayName: profile.displayName,
-      seed: tournament.participants.length + 1,
-    },
-  ]);
+    const tournament = await tournamentRepository.findById(freshInvite.tournamentId);
+    if (!tournament || tournament.status !== TournamentStatus.RECRUITING) {
+      throw new AppError("TOURNAMENT_NOT_JOINABLE", "この大会はすでに開始・終了しています。");
+    }
+    if (tournament.participants.length >= tournament.maxPlayers) {
+      throw new AppError("TOURNAMENT_NOT_JOINABLE", "この大会はすでに満員です。");
+    }
 
-  await prisma.$transaction(async (tx) => {
-    const fresh = await tx.playerProfile.findUniqueOrThrow({ where: { id: profile.id } });
-    await awardPoints(tx, {
-      playerProfileId: profile.id,
-      currentPoints: fresh.totalPoints,
-      reason: PointReason.TOURNAMENT_ENTRY,
-      league,
-      tournamentId: tournament.id,
-      leagueId: league.id,
+    const league = await leagueRepository.findById(tournament.leagueId);
+    if (!league) throw new AppError("NOT_FOUND", "リーグが見つかりません。");
+    if (profile.totalPoints < league.requiredPoints) {
+      throw new AppError("TOURNAMENT_NOT_JOINABLE", "このリーグはまだ解放されていません。");
+    }
+
+    await tournamentParticipantRepository.createMany([
+      {
+        tournamentId: tournament.id,
+        playerId: profile.id,
+        type: ParticipantType.HUMAN,
+        displayName: profile.displayName,
+        seed: tournament.participants.length + 1,
+      },
+    ]);
+
+    await prisma.$transaction(async (tx) => {
+      const fresh = await tx.playerProfile.findUniqueOrThrow({ where: { id: profile.id } });
+      await awardPoints(tx, {
+        playerProfileId: profile.id,
+        currentPoints: fresh.totalPoints,
+        reason: PointReason.TOURNAMENT_ENTRY,
+        league,
+        tournamentId: tournament.id,
+        leagueId: league.id,
+      });
+      await tx.playerProfile.update({ where: { id: profile.id }, data: { tournamentEntries: { increment: 1 } } });
     });
-    await tx.playerProfile.update({ where: { id: profile.id }, data: { tournamentEntries: { increment: 1 } } });
+
+    await tournamentInviteRepository.accept(inviteId);
+
+    return tournament.id;
   });
 
-  await tournamentInviteRepository.accept(inviteId);
-  await finalizeIfDue(tournament.id);
+  await finalizeIfDue(tournamentId);
 
-  return { tournamentId: tournament.id };
+  return { tournamentId };
 }
 
 /** Powers the "フレンドと大会を開く" friend picker: which friends could actually be invited to

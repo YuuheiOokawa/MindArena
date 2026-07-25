@@ -8,6 +8,8 @@ import {
   searchPlayerByUsername,
 } from "@/features/friends/friend.service";
 import { acceptFriendRequest, removeFriendship, sendFriendRequest } from "@/features/friends/friend-request.service";
+import { sendChallenge } from "@/features/friends/challenge.service";
+import { friendChallengeRepository } from "@/infrastructure/repositories/friend-challenge.repository";
 import { AppError } from "@/lib/errors/app-error";
 
 /**
@@ -88,9 +90,8 @@ describe("friend request lifecycle", () => {
     expect(incoming[0].from.displayName).toBe(ALICE_USERNAME);
   });
 
-  it("rejects a duplicate request while one is pending", async () => {
+  it("rejects a duplicate request in the same direction while one is pending", async () => {
     await expect(sendFriendRequest(aliceUserId, BOB_USERNAME)).rejects.toThrow(AppError);
-    await expect(sendFriendRequest(bobUserId, ALICE_USERNAME)).rejects.toThrow(AppError);
   });
 
   it("reflects REQUEST_SENT / REQUEST_RECEIVED relations while pending", async () => {
@@ -122,5 +123,81 @@ describe("friend request lifecycle", () => {
 
     expect(await listMyFriends(aliceUserId)).toHaveLength(0);
     expect(await listMyFriends(bobUserId)).toHaveLength(0);
+  });
+});
+
+describe("mutual friend requests and unfriend cleanup", () => {
+  const CAROL_USERNAME = `friend_carol_${RUN_ID}`;
+  const DAVE_USERNAME = `friend_dave_${RUN_ID}`;
+  const EVE_USERNAME = `friend_eve_${RUN_ID}`;
+  const FRANK_USERNAME = `friend_frank_${RUN_ID}`;
+
+  let carolUserId: string;
+  let daveUserId: string;
+  let eveUserId: string;
+  let frankUserId: string;
+
+  beforeAll(async () => {
+    async function register(username: string) {
+      const user = await registerUser({
+        username,
+        email: `${username}@example.com`,
+        password: "TestPass123",
+        confirmPassword: "TestPass123",
+        agreedToTerms: true,
+      });
+      return user.id;
+    }
+
+    [carolUserId, daveUserId, eveUserId, frankUserId] = await Promise.all([
+      register(CAROL_USERNAME),
+      register(DAVE_USERNAME),
+      register(EVE_USERNAME),
+      register(FRANK_USERNAME),
+    ]);
+  });
+
+  afterAll(async () => {
+    for (const userId of [carolUserId, daveUserId, eveUserId, frankUserId].filter(Boolean)) {
+      const profile = await prisma.playerProfile.findUnique({ where: { userId } });
+      if (profile) {
+        await prisma.friendChallenge.deleteMany({ where: { OR: [{ challengerId: profile.id }, { opponentId: profile.id }] } });
+        await prisma.friendship.deleteMany({ where: { OR: [{ requesterId: profile.id }, { addresseeId: profile.id }] } });
+      }
+      await prisma.playerProfile.deleteMany({ where: { userId } });
+      await prisma.user.deleteMany({ where: { id: userId } });
+    }
+  });
+
+  it("auto-accepts instead of erroring when the target already sent a pending request", async () => {
+    await sendFriendRequest(carolUserId, DAVE_USERNAME);
+    // Dave requesting Carol back, while Carol's request to Dave is still pending, should just
+    // become a friendship rather than throwing FRIEND_REQUEST_EXISTS.
+    await sendFriendRequest(daveUserId, CAROL_USERNAME);
+
+    const carolFriends = await listMyFriends(carolUserId);
+    expect(carolFriends.map((f) => f.displayName)).toContain(DAVE_USERNAME);
+    const daveFriends = await listMyFriends(daveUserId);
+    expect(daveFriends.map((f) => f.displayName)).toContain(CAROL_USERNAME);
+
+    expect(await listOutgoingFriendRequests(carolUserId)).toHaveLength(0);
+    expect(await listIncomingFriendRequests(daveUserId)).toHaveLength(0);
+  });
+
+  it("declines a pending friend challenge when the friendship is removed", async () => {
+    await sendFriendRequest(eveUserId, FRANK_USERNAME);
+    const incoming = await listIncomingFriendRequests(frankUserId);
+    await acceptFriendRequest(frankUserId, incoming[0].friendshipId);
+
+    const frankProfile = await prisma.playerProfile.findUniqueOrThrow({ where: { userId: frankUserId } });
+
+    const challenge = await sendChallenge(eveUserId, frankProfile.id);
+    expect(challenge.status).toBe("PENDING");
+
+    const eveFriends = await listMyFriends(eveUserId);
+    await removeFriendship(eveUserId, eveFriends[0].friendshipId);
+
+    const freshChallenge = await friendChallengeRepository.findById(challenge.id);
+    expect(freshChallenge?.status).toBe("DECLINED");
   });
 });

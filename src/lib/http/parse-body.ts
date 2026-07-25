@@ -10,7 +10,11 @@ export async function parseJsonBody<T>(request: Request, schema: ZodType<T>): Pr
   }
   const parsed = schema.safeParse(raw);
   if (!parsed.success) {
-    throw new AppError("VALIDATION_ERROR", "入力内容を確認してください。");
+    // Surface the schema's own message (e.g. "画像サイズが大きすぎます。") when it has one,
+    // instead of always collapsing to the generic fallback — Zod's first issue is usually the
+    // most actionable one to show.
+    const message = parsed.error.issues[0]?.message;
+    throw new AppError("VALIDATION_ERROR", message || undefined);
   }
   return parsed.data;
 }

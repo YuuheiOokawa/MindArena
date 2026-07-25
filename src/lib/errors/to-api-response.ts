@@ -14,7 +14,7 @@ export function toApiErrorResponse(error: unknown, context?: Record<string, unkn
   }
 
   if (error instanceof ZodError) {
-    return apiError("VALIDATION_ERROR", "入力内容を確認してください。");
+    return apiError("VALIDATION_ERROR", error.issues[0]?.message || "入力内容を確認してください。");
   }
 
   logger.error("Unhandled error in API layer", error, context);

@@ -29,6 +29,7 @@ const TOGGLES: { key: keyof SettingsState; label: string; description: string }[
 export default function SettingsPage() {
   const [settings, setSettings] = useState<SettingsState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [toggleError, setToggleError] = useState<string | null>(null);
 
   useEffect(() => {
     apiClient
@@ -41,10 +42,12 @@ export default function SettingsPage() {
     if (!settings) return;
     const next = { ...settings, [key]: !settings[key] };
     setSettings(next);
+    setToggleError(null);
     try {
       await apiClient.patch("/api/profile/me/settings", { [key]: next[key] });
-    } catch {
+    } catch (e) {
       setSettings(settings); // revert on failure
+      setToggleError(e instanceof ApiClientError ? e.message : "設定の保存に失敗しました。");
     }
   }
 
@@ -55,6 +58,7 @@ export default function SettingsPage() {
         {!error && !settings && <LoadingState />}
         {settings && (
           <div className="flex flex-col gap-2">
+            {toggleError && <p className="text-xs text-arena-danger">{toggleError}</p>}
             {TOGGLES.map((item) => (
               <Card key={item.key}>
                 <CardContent className="flex items-center justify-between py-3.5">

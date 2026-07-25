@@ -34,5 +34,27 @@ export async function awardPoints(
     balanceAfter: ledger.balanceAfter,
   });
 
+  await syncCurrentLeague(tx, params.playerProfileId, ledger.balanceAfter);
+
   return ledger;
+}
+
+/**
+ * `currentLeagueId` is otherwise only ever set once, at registration (see register.service.ts) —
+ * nothing previously kept it in sync with totalPoints as a player actually progressed, so
+ * anywhere it was trusted directly (friend-challenge league selection, league badges on friend/
+ * opponent cards) would silently show/use a player's STARTING league forever. Every point award
+ * is exactly the moment totalPoints can cross a league threshold, so recomputing here keeps it
+ * accurate going forward for every profile without needing a background job.
+ */
+async function syncCurrentLeague(tx: Tx, playerProfileId: string, totalPoints: number) {
+  const league = await tx.league.findFirst({
+    where: { isActive: true, requiredPoints: { lte: totalPoints } },
+    orderBy: { requiredPoints: "desc" },
+  });
+  if (!league) return;
+  await tx.playerProfile.updateMany({
+    where: { id: playerProfileId, currentLeagueId: { not: league.id } },
+    data: { currentLeagueId: league.id },
+  });
 }

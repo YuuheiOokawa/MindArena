@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { Brain, Eye, Ghost, Skull, Crown, Flame, Zap, Swords, Shield, Moon, Star, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { getAvatarIcon } from "@/config/avatar-icons";
@@ -36,6 +39,15 @@ export function PlayerAvatar({
 }) {
   const avatar = getAvatarIcon(avatarIconId);
   const Icon = avatar ? AVATAR_ICON_COMPONENTS[avatar.icon] : null;
+  const [photoFailed, setPhotoFailed] = useState(false);
+  // Reset the failure flag when a different photoUrl comes in (e.g. the profile edit page
+  // swapping between an uploaded photo and an icon and back) — adjusting state during render
+  // rather than in a useEffect, per this repo's react-hooks/set-state-in-effect convention.
+  const [trackedPhotoUrl, setTrackedPhotoUrl] = useState(photoUrl);
+  if (photoUrl !== trackedPhotoUrl) {
+    setTrackedPhotoUrl(photoUrl);
+    setPhotoFailed(false);
+  }
 
   return (
     <div
@@ -44,9 +56,9 @@ export function PlayerAvatar({
         className,
       )}
     >
-      {photoUrl ? (
+      {photoUrl && !photoFailed ? (
         // eslint-disable-next-line @next/next/no-img-element -- user-uploaded data: URI, not an optimizable static asset
-        <img src={photoUrl} alt="" className="h-full w-full object-cover" />
+        <img src={photoUrl} alt="" className="h-full w-full object-cover" onError={() => setPhotoFailed(true)} />
       ) : Icon ? (
         <Icon className={cn(avatar!.colorClass, iconClassName ?? "h-6 w-6")} />
       ) : (

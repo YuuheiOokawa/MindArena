@@ -4,6 +4,7 @@ import { tournamentParticipantRepository } from "@/infrastructure/repositories/t
 import { tournamentInviteRepository } from "@/infrastructure/repositories/tournament-invite.repository";
 import { playerProfileRepository } from "@/infrastructure/repositories/player-profile.repository";
 import { leagueRepository } from "@/infrastructure/repositories/league.repository";
+import { withKeyLock } from "@/infrastructure/repositories/advisory-lock.repository";
 import { ParticipantType, PointReason } from "@/domain/enums";
 import { AppError } from "@/lib/errors/app-error";
 import { awardPoints } from "@/features/points/award-points.service";
@@ -28,37 +29,53 @@ export async function joinTournament(userId: string, leagueId: string) {
     throw new AppError("TOURNAMENT_NOT_JOINABLE", "このリーグはまだ解放されていません。");
   }
 
-  const active = await tournamentRepository.findActiveForPlayer(profile.id);
-  if (active) return active;
+  // Locked on the player's own id so two concurrent join attempts (double-click, a retried
+  // request) can't both pass the "no active tournament" check before either has written
+  // anything — without this, both would create their own tournament and both would be awarded
+  // TOURNAMENT_ENTRY points. finalizeRecruitingTournament acquires its own lock (on the
+  // tournament id) internally, so it's deliberately called AFTER this one releases below —
+  // calling it from inside this callback would self-deadlock (this connection would be waiting
+  // on itself via two different pooled connections trying to take the same tournament-id lock).
+  const outcome = await withKeyLock(profile.id, async () => {
+    const active = await tournamentRepository.findActiveForPlayer(profile.id);
+    if (active) return { tournamentId: active.id, needsInstantFinalize: false };
 
-  const tournament = await tournamentRepository.create(leagueId, 32);
+    const tournament = await tournamentRepository.create(leagueId, 32);
 
-  await tournamentParticipantRepository.createMany([
-    { tournamentId: tournament.id, playerId: profile.id, type: ParticipantType.HUMAN, displayName: profile.displayName, seed: 1 },
-  ]);
+    await tournamentParticipantRepository.createMany([
+      { tournamentId: tournament.id, playerId: profile.id, type: ParticipantType.HUMAN, displayName: profile.displayName, seed: 1 },
+    ]);
 
-  await prisma.$transaction(async (tx) => {
-    const fresh = await tx.playerProfile.findUniqueOrThrow({ where: { id: profile.id } });
-    await awardPoints(tx, {
-      playerProfileId: profile.id,
-      currentPoints: fresh.totalPoints,
-      reason: PointReason.TOURNAMENT_ENTRY,
-      league,
-      tournamentId: tournament.id,
-      leagueId: league.id,
+    await prisma.$transaction(async (tx) => {
+      const fresh = await tx.playerProfile.findUniqueOrThrow({ where: { id: profile.id } });
+      await awardPoints(tx, {
+        playerProfileId: profile.id,
+        currentPoints: fresh.totalPoints,
+        reason: PointReason.TOURNAMENT_ENTRY,
+        league,
+        tournamentId: tournament.id,
+        leagueId: league.id,
+      });
+      await tx.playerProfile.update({ where: { id: profile.id }, data: { tournamentEntries: { increment: 1 } } });
     });
-    await tx.playerProfile.update({ where: { id: profile.id }, data: { tournamentEntries: { increment: 1 } } });
+
+    const invitable = await findInvitableFriends(profile.id, league);
+    let needsInstantFinalize = false;
+    if (invitable.length > 0) {
+      await tournamentInviteRepository.createMany(tournament.id, profile.id, invitable.map((row) => row.friend.id));
+    } else {
+      // Nobody to wait for — keep the original instant behavior exactly as before.
+      needsInstantFinalize = true;
+    }
+
+    return { tournamentId: tournament.id, needsInstantFinalize };
   });
 
-  const invitable = await findInvitableFriends(profile.id, league);
-  if (invitable.length > 0) {
-    await tournamentInviteRepository.createMany(tournament.id, profile.id, invitable.map((row) => row.friend.id));
-  } else {
-    // Nobody to wait for — keep the original instant behavior exactly as before.
-    await finalizeRecruitingTournament(tournament.id);
+  if (outcome.needsInstantFinalize) {
+    await finalizeRecruitingTournament(outcome.tournamentId);
   }
 
-  return tournamentRepository.findById(tournament.id);
+  return tournamentRepository.findById(outcome.tournamentId);
 }
 
 /** A deliberate friend-only lobby: like joinTournament, but the creator hand-picks exactly which
@@ -77,36 +94,38 @@ export async function createFriendTournament(userId: string, leagueId: string, i
     throw new AppError("VALIDATION_ERROR", "招待するフレンドを1人以上選んでください。");
   }
 
-  const active = await tournamentRepository.findActiveForPlayer(profile.id);
-  if (active) throw new AppError("TOURNAMENT_NOT_JOINABLE", "すでに別のトーナメントに参加中です。");
+  return withKeyLock(profile.id, async () => {
+    const active = await tournamentRepository.findActiveForPlayer(profile.id);
+    if (active) throw new AppError("TOURNAMENT_NOT_JOINABLE", "すでに別のトーナメントに参加中です。");
 
-  const invitable = await findInvitableFriends(profile.id, league);
-  const invitableIds = new Set(invitable.map((row) => row.friend.id));
-  const validIds = inviteeProfileIds.filter((id) => invitableIds.has(id));
-  if (validIds.length === 0) {
-    throw new AppError("VALIDATION_ERROR", "招待できるフレンドが選ばれていません。");
-  }
+    const invitable = await findInvitableFriends(profile.id, league);
+    const invitableIds = new Set(invitable.map((row) => row.friend.id));
+    const validIds = inviteeProfileIds.filter((id) => invitableIds.has(id));
+    if (validIds.length === 0) {
+      throw new AppError("VALIDATION_ERROR", "招待できるフレンドが選ばれていません。");
+    }
 
-  const tournament = await tournamentRepository.create(leagueId, 32);
+    const tournament = await tournamentRepository.create(leagueId, 32);
 
-  await tournamentParticipantRepository.createMany([
-    { tournamentId: tournament.id, playerId: profile.id, type: ParticipantType.HUMAN, displayName: profile.displayName, seed: 1 },
-  ]);
+    await tournamentParticipantRepository.createMany([
+      { tournamentId: tournament.id, playerId: profile.id, type: ParticipantType.HUMAN, displayName: profile.displayName, seed: 1 },
+    ]);
 
-  await prisma.$transaction(async (tx) => {
-    const fresh = await tx.playerProfile.findUniqueOrThrow({ where: { id: profile.id } });
-    await awardPoints(tx, {
-      playerProfileId: profile.id,
-      currentPoints: fresh.totalPoints,
-      reason: PointReason.TOURNAMENT_ENTRY,
-      league,
-      tournamentId: tournament.id,
-      leagueId: league.id,
+    await prisma.$transaction(async (tx) => {
+      const fresh = await tx.playerProfile.findUniqueOrThrow({ where: { id: profile.id } });
+      await awardPoints(tx, {
+        playerProfileId: profile.id,
+        currentPoints: fresh.totalPoints,
+        reason: PointReason.TOURNAMENT_ENTRY,
+        league,
+        tournamentId: tournament.id,
+        leagueId: league.id,
+      });
+      await tx.playerProfile.update({ where: { id: profile.id }, data: { tournamentEntries: { increment: 1 } } });
     });
-    await tx.playerProfile.update({ where: { id: profile.id }, data: { tournamentEntries: { increment: 1 } } });
+
+    await tournamentInviteRepository.createMany(tournament.id, profile.id, validIds);
+
+    return tournamentRepository.findById(tournament.id);
   });
-
-  await tournamentInviteRepository.createMany(tournament.id, profile.id, validIds);
-
-  return tournamentRepository.findById(tournament.id);
 }

@@ -86,12 +86,12 @@ test("two friends can challenge each other, play the match, and land on the righ
   await alicePage.goto("/friends");
   await alicePage.getByPlaceholder("ユーザー名を入力").fill(bob);
   await alicePage.getByRole("button", { name: "検索" }).click();
-  await expect(alicePage.getByText(bob, { exact: false })).toBeVisible();
+  await expect(alicePage.getByText(bob, { exact: true })).toBeVisible();
   await alicePage.getByRole("button", { name: "申請", exact: true }).first().click();
 
   await bobPage.goto("/friends");
   await bobPage.getByRole("button", { name: /^申請/ }).click();
-  await expect(bobPage.getByText(alice, { exact: false })).toBeVisible();
+  await expect(bobPage.getByText(alice, { exact: true })).toBeVisible();
   await bobPage.getByRole("button", { name: "承認" }).click();
   // "承認" doesn't navigate anywhere, so there's no URL/route signal to wait on for the POST +
   // refetch it triggers — waiting for the tab's own count to flip is what actually confirms it landed.
@@ -103,7 +103,7 @@ test("two friends can challenge each other, play the match, and land on the righ
   // the (currently-empty, so suffix-less) battles tab button, which sits before the friend list
   // in the DOM — .last() picks bob's row button.
   await alicePage.goto("/friends");
-  await expect(alicePage.getByText(bob, { exact: false })).toBeVisible();
+  await expect(alicePage.getByText(bob, { exact: true })).toBeVisible();
   await alicePage.getByRole("button", { name: "対戦", exact: true }).last().click();
   // Same "no navigation to wait on" gap as the friend-request accept above.
   await expect(alicePage.getByRole("button", { name: "対戦 (1)" })).toBeVisible();
@@ -112,7 +112,7 @@ test("two friends can challenge each other, play the match, and land on the righ
   // bracket. Same tab-vs-row-button ambiguity as above, but the tab button is first in the DOM.
   await bobPage.goto("/friends");
   await bobPage.getByRole("button", { name: /^対戦/ }).first().click();
-  await expect(bobPage.getByText(alice, { exact: false })).toBeVisible();
+  await expect(bobPage.getByText(alice, { exact: true })).toBeVisible();
   await bobPage.getByRole("button", { name: "受ける" }).click();
   await bobPage.waitForURL(/\/tournaments\/.+\/bracket/, { timeout: 15_000 });
 

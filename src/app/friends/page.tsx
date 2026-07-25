@@ -152,7 +152,10 @@ export default function FriendsPage() {
   }
 
   async function sendRequest(username: string) {
-    setActionPending(username);
+    // Keyed on profileId (matching SearchActionButton's `pending` check below) rather than the
+    // searched username, so the button actually disables while the request is in flight instead
+    // of comparing against a value that can never match and always reading as "not pending".
+    setActionPending(searchResult?.profileId ?? username);
     try {
       await apiClient.post("/api/friends/requests", { username });
       setSearchResult((prev) => (prev ? { ...prev, relation: "REQUEST_SENT" } : prev));

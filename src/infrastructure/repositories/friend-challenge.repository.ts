@@ -24,8 +24,16 @@ export const friendChallengeRepository = {
     });
   },
 
+  /** Upsert rather than a plain insert: `@@unique([challengerId, opponentId])` means a SECOND
+   * challenge in the same direction would otherwise hit that constraint forever once the first
+   * one resolves (DECLINED/ACCEPTED rows are kept, not deleted, for history) — re-challenging a
+   * friend after a decline, or challenging them again after a previous match, must keep working. */
   async create(challengerId: string, opponentId: string) {
-    return prisma.friendChallenge.create({ data: { challengerId, opponentId } });
+    return prisma.friendChallenge.upsert({
+      where: { challengerId_opponentId: { challengerId, opponentId } },
+      create: { challengerId, opponentId },
+      update: { status: FriendChallengeStatus.PENDING, tournamentId: null, createdAt: new Date() },
+    });
   },
 
   async findById(id: string) {
@@ -41,6 +49,22 @@ export const friendChallengeRepository = {
 
   async decline(id: string) {
     return prisma.friendChallenge.update({ where: { id }, data: { status: FriendChallengeStatus.DECLINED } });
+  },
+
+  /** Declines any still-PENDING challenge between two profiles regardless of direction — called
+   * when the friendship itself is removed, so accepting can't create a real tournament between
+   * two accounts that are no longer friends. */
+  async declineAllPendingBetween(profileIdA: string, profileIdB: string) {
+    await prisma.friendChallenge.updateMany({
+      where: {
+        status: FriendChallengeStatus.PENDING,
+        OR: [
+          { challengerId: profileIdA, opponentId: profileIdB },
+          { challengerId: profileIdB, opponentId: profileIdA },
+        ],
+      },
+      data: { status: FriendChallengeStatus.DECLINED },
+    });
   },
 
   async listIncoming(profileId: string) {

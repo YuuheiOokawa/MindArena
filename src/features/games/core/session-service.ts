@@ -6,6 +6,7 @@ import { getGame } from "@/features/games/core/registry";
 import { redactStateForParticipant } from "@/features/games/core/redaction";
 import { finalizeMatchResult } from "@/features/tournaments/progress.service";
 import { coinFlip } from "@/domain/services/tiebreak";
+import { isFinalRound } from "@/domain/services/bracket.service";
 import { DEFAULT_GAME_TIMERS } from "@/config/timers";
 import { ROUND_CLEAR_REASON } from "@/config/round-rewards";
 import { MatchStatus, PointReason, type ParticipantType } from "@/domain/enums";
@@ -215,7 +216,10 @@ export async function getMatchResultForParticipant(matchId: string, participantI
   const resultData = result.resultData as unknown as { rounds?: unknown[] } | null;
 
   const me = match.player1ParticipantId === participantId ? match.player1 : match.player2;
-  const pointsEarned = won && me?.playerId ? await findAwardedPointsForRound(me.playerId, match.tournamentId, match.round) : 0;
+  const pointsEarned =
+    won && me?.playerId
+      ? await findAwardedPointsForRound(me.playerId, match.tournamentId, match.round, match.tournament.maxPlayers)
+      : 0;
 
   return {
     matchId,
@@ -230,8 +234,8 @@ export async function getMatchResultForParticipant(matchId: string, participantI
   };
 }
 
-async function findAwardedPointsForRound(playerProfileId: string, tournamentId: string, round: number) {
-  const isFinal = round === 5;
+async function findAwardedPointsForRound(playerProfileId: string, tournamentId: string, round: number, maxPlayers: number) {
+  const isFinal = isFinalRound(round, maxPlayers);
   const reason = isFinal ? PointReason.CHAMPION : ROUND_CLEAR_REASON[round];
   if (!reason) return 0;
 

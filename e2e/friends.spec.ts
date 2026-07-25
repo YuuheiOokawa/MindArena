@@ -30,20 +30,20 @@ test("two players can send, accept, and remove a friend request", async ({ brows
   await alicePage.goto("/friends");
   await alicePage.getByPlaceholder("ユーザー名を入力").fill(bob);
   await alicePage.getByRole("button", { name: "検索" }).click();
-  await expect(alicePage.getByText(bob, { exact: false })).toBeVisible();
+  await expect(alicePage.getByText(bob, { exact: true })).toBeVisible();
   await alicePage.getByRole("button", { name: "申請", exact: true }).first().click();
   await expect(alicePage.getByText("申請済み")).toBeVisible();
 
   await bobPage.goto("/friends");
   await bobPage.getByRole("button", { name: /^申請/ }).click();
-  await expect(bobPage.getByText(alice, { exact: false })).toBeVisible();
+  await expect(bobPage.getByText(alice, { exact: true })).toBeVisible();
   await bobPage.getByRole("button", { name: "承認" }).click();
 
   await bobPage.getByRole("button", { name: /^フレンド/ }).click();
-  await expect(bobPage.getByText(alice, { exact: false })).toBeVisible();
+  await expect(bobPage.getByText(alice, { exact: true })).toBeVisible();
 
   await alicePage.reload();
-  await expect(alicePage.getByText(bob, { exact: false })).toBeVisible();
+  await expect(alicePage.getByText(bob, { exact: true })).toBeVisible();
 
   await alicePage.getByLabel("フレンド解除").click();
   await expect(alicePage.getByText("まだフレンドがいません")).toBeVisible();

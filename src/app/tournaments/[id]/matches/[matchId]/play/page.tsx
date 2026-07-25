@@ -49,6 +49,7 @@ function GamePlaySession({ id, matchId }: { id: string; matchId: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [revealEntry, setRevealEntry] = useState<RoundEntry | null>(null);
   const [isFinalReveal, setIsFinalReveal] = useState(false);
+  const [retryToken, setRetryToken] = useState(0);
   const navigatedRef = useRef(false);
   const shownRoundsRef = useRef<Set<number>>(new Set());
   // The background poll's setTimeout loop is created once and doesn't re-run per render, so it
@@ -108,6 +109,11 @@ function GamePlaySession({ id, matchId }: { id: string; matchId: string }) {
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
+    // A single transient failure (a mobile network blip, a momentary 5xx) shouldn't eject a
+    // player from a live match they may be winning — keep retrying quietly with backoff, and
+    // only surface a terminal error screen (with a manual retry) after several in a row.
+    let consecutiveFailures = 0;
+    const MAX_SILENT_RETRIES = 6;
 
     async function poll() {
       if (navigatedRef.current) return;
@@ -122,12 +128,17 @@ function GamePlaySession({ id, matchId }: { id: string; matchId: string }) {
       try {
         const data = await apiClient.get<RawState>(`/api/matches/${matchId}/session`);
         if (cancelled || navigatedRef.current) return;
+        consecutiveFailures = 0;
         applyIncomingState(data, myParticipantId);
         timer = setTimeout(poll, 1200);
       } catch (e) {
-        if (!cancelled && !navigatedRef.current && !revealPendingRef.current) {
-          setError(e instanceof ApiClientError ? e.message : "対戦状況の取得に失敗しました。");
+        if (cancelled || navigatedRef.current || revealPendingRef.current) return;
+        consecutiveFailures += 1;
+        if (consecutiveFailures <= MAX_SILENT_RETRIES) {
+          timer = setTimeout(poll, Math.min(1200 * consecutiveFailures, 8000));
+          return;
         }
+        setError(e instanceof ApiClientError ? e.message : "対戦状況の取得に失敗しました。");
       }
     }
 
@@ -137,7 +148,7 @@ function GamePlaySession({ id, matchId }: { id: string; matchId: string }) {
       clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matchId, id, myParticipantId]);
+  }, [matchId, id, myParticipantId, retryToken]);
 
   async function handleSubmit(actionType: string, actionData: unknown) {
     if (!state) return;
@@ -157,7 +168,19 @@ function GamePlaySession({ id, matchId }: { id: string; matchId: string }) {
     }
   }
 
-  if (error) return <AppScreen header={<FocusHeader title="対戦中" />}><ErrorState message={error} /></AppScreen>;
+  if (error) {
+    return (
+      <AppScreen header={<FocusHeader title="対戦中" />}>
+        <ErrorState
+          message={error}
+          onRetry={() => {
+            setError(null);
+            setRetryToken((t) => t + 1);
+          }}
+        />
+      </AppScreen>
+    );
+  }
   if (!state || !myParticipantId) return <AppScreen header={<FocusHeader title="対戦中" />}><LoadingState label="対戦を準備しています…" /></AppScreen>;
 
   const myScore = state.scores[myParticipantId] ?? 0;

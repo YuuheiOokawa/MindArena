@@ -70,19 +70,32 @@ export default function BracketPage({ params }: { params: Promise<{ id: string }
   // since a match that was already decided before this page ever loaded isn't actually new.
   const [winnerBaseline, setWinnerBaseline] = useState<Record<string, string | null> | null>(null);
   const [freshMatchIds, setFreshMatchIds] = useState<Set<string>>(new Set());
+  const [retryToken, setRetryToken] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
+    // A single transient failure shouldn't strand a player watching the bracket with a dead end
+    // — keep retrying quietly with backoff, and only surface a terminal error (with a manual
+    // retry) after several in a row.
+    let consecutiveFailures = 0;
+    const MAX_SILENT_RETRIES = 6;
 
     async function poll() {
       try {
         const data = await apiClient.get<TournamentView>(`/api/tournaments/${id}`);
         if (cancelled) return;
+        consecutiveFailures = 0;
         setView(data);
         if (data.status === "IN_PROGRESS") timer = setTimeout(poll, 2500);
       } catch (e) {
-        if (!cancelled) setError(e instanceof ApiClientError ? e.message : "対戦表の取得に失敗しました。");
+        if (cancelled) return;
+        consecutiveFailures += 1;
+        if (consecutiveFailures <= MAX_SILENT_RETRIES) {
+          timer = setTimeout(poll, Math.min(2500 * consecutiveFailures, 10_000));
+          return;
+        }
+        setError(e instanceof ApiClientError ? e.message : "対戦表の取得に失敗しました。");
       }
     }
 
@@ -91,9 +104,21 @@ export default function BracketPage({ params }: { params: Promise<{ id: string }
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [id]);
+  }, [id, retryToken]);
 
-  if (error) return <AppScreen nav header={<FocusHeader title="対戦表" backHref="/home" />}><ErrorState message={error} /></AppScreen>;
+  if (error) {
+    return (
+      <AppScreen nav header={<FocusHeader title="対戦表" backHref="/home" />}>
+        <ErrorState
+          message={error}
+          onRetry={() => {
+            setError(null);
+            setRetryToken((t) => t + 1);
+          }}
+        />
+      </AppScreen>
+    );
+  }
   if (!view) return <AppScreen nav header={<FocusHeader title="対戦表" backHref="/home" />}><LoadingState /></AppScreen>;
 
   if (showAdvance) {

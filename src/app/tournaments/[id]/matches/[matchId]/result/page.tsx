@@ -44,6 +44,7 @@ function MatchResultSession({ id, matchId }: { id: string; matchId: string }) {
   }, [matchId]);
 
   async function handleNext() {
+    if (navigating) return;
     setNavigating(true);
     try {
       const resume = await apiClient.get<ResumeScreen>("/api/tournaments/resume");
@@ -55,6 +56,12 @@ function MatchResultSession({ id, matchId }: { id: string; matchId: string }) {
     } catch {
       router.push(`/tournaments/${id}/bracket`);
     }
+  }
+
+  function handleBackToBracket() {
+    if (navigating) return;
+    setNavigating(true);
+    router.push(`/tournaments/${id}/bracket`);
   }
 
   if (error) return <AppScreen><ErrorState message={error} /></AppScreen>;
@@ -108,7 +115,7 @@ function MatchResultSession({ id, matchId }: { id: string; matchId: string }) {
           <Button variant="gold" onClick={handleNext} disabled={navigating}>
             {navigating ? "移動中…" : "次へ進む"}
           </Button>
-          <Button variant="secondary" onClick={() => router.push(`/tournaments/${id}/bracket`)}>
+          <Button variant="secondary" onClick={handleBackToBracket} disabled={navigating}>
             トーナメント表へ戻る
           </Button>
         </div>

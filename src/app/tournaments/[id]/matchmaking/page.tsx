@@ -26,15 +26,22 @@ export default function MatchmakingPage({ params }: { params: Promise<{ id: stri
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [retryToken, setRetryToken] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
+    // A single transient failure shouldn't strand a player in the matchmaking queue with a dead
+    // end — keep retrying quietly with backoff, and only surface a terminal error (with a manual
+    // retry) after several in a row.
+    let consecutiveFailures = 0;
+    const MAX_SILENT_RETRIES = 6;
 
     async function poll() {
       try {
         const data = await apiClient.get<TournamentView>(`/api/tournaments/${id}`);
         if (cancelled) return;
+        consecutiveFailures = 0;
         setView(data);
         if (data.status !== "RECRUITING") {
           setReady(true);
@@ -43,7 +50,13 @@ export default function MatchmakingPage({ params }: { params: Promise<{ id: stri
         }
         timer = setTimeout(poll, 800);
       } catch (e) {
-        if (!cancelled) setError(e instanceof ApiClientError ? e.message : "マッチング状況の取得に失敗しました。");
+        if (cancelled) return;
+        consecutiveFailures += 1;
+        if (consecutiveFailures <= MAX_SILENT_RETRIES) {
+          timer = setTimeout(poll, Math.min(800 * consecutiveFailures, 8000));
+          return;
+        }
+        setError(e instanceof ApiClientError ? e.message : "マッチング状況の取得に失敗しました。");
       }
     }
 
@@ -52,7 +65,7 @@ export default function MatchmakingPage({ params }: { params: Promise<{ id: stri
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [id, router]);
+  }, [id, router, retryToken]);
 
   async function handleStartNow() {
     setStarting(true);
@@ -64,7 +77,19 @@ export default function MatchmakingPage({ params }: { params: Promise<{ id: stri
     }
   }
 
-  if (error) return <AppScreen><ErrorState message={error} /></AppScreen>;
+  if (error) {
+    return (
+      <AppScreen>
+        <ErrorState
+          message={error}
+          onRetry={() => {
+            setError(null);
+            setRetryToken((t) => t + 1);
+          }}
+        />
+      </AppScreen>
+    );
+  }
 
   const count = view?.participantCount ?? 1;
   const max = view?.maxPlayers ?? 32;

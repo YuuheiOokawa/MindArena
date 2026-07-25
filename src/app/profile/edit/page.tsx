@@ -11,7 +11,7 @@ import { PlayerAvatar } from "@/components/common/player-avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Check, Camera, X } from "lucide-react";
+import { Check, Camera, Lock, X } from "lucide-react";
 import { TITLES } from "@/config/titles";
 import { AVATAR_ICONS } from "@/config/avatar-icons";
 import { cn } from "@/lib/utils/cn";
@@ -20,6 +20,7 @@ import { resizeImageToSquareDataUrl } from "@/lib/utils/resize-image";
 interface EditableProfile {
   displayName: string;
   selectedTitleId: string | null;
+  unlockedTitleIds: string[];
   selectedAvatarIconId: string | null;
   customAvatarUrl: string | null;
 }
@@ -57,8 +58,8 @@ export default function ProfileEditPage() {
     try {
       const dataUrl = await resizeImageToSquareDataUrl(file);
       setCustomAvatarUrl(dataUrl);
-    } catch {
-      setError("写真の読み込みに失敗しました。");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "写真の読み込みに失敗しました。");
     } finally {
       setProcessingPhoto(false);
     }
@@ -166,21 +167,28 @@ export default function ProfileEditPage() {
               <div className="flex flex-col gap-2">
                 {TITLES.map((title) => {
                   const selected = title.id === selectedTitleId;
+                  const unlocked = profile.unlockedTitleIds.includes(title.id);
                   return (
                     <button
                       key={title.id}
                       type="button"
+                      disabled={!unlocked}
                       onClick={() => setSelectedTitleId(title.id)}
                       className={cn(
                         "flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition-colors",
                         selected ? "border-arena-primary bg-arena-primary/10" : "border-arena-border bg-white/[0.03]",
+                        !unlocked && "cursor-not-allowed opacity-50",
                       )}
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-arena-white">{title.name}</p>
                         <p className="truncate text-[11px] text-arena-silver/70">{title.unlockHint}</p>
                       </div>
-                      {selected && <Check className="h-4 w-4 shrink-0 text-arena-primary-soft" />}
+                      {selected ? (
+                        <Check className="h-4 w-4 shrink-0 text-arena-primary-soft" />
+                      ) : (
+                        !unlocked && <Lock className="h-4 w-4 shrink-0 text-arena-silver/50" />
+                      )}
                     </button>
                   );
                 })}
