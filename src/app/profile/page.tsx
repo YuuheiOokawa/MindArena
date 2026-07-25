@@ -15,6 +15,7 @@ import { BookOpen, Coins, Compass, Crown, Eye, Flame, Gem, Pencil, Settings, Shi
 import { TITLES } from "@/config/titles";
 import { BACKGROUND_GRADIENTS, BADGE_ICON_KEYS } from "@/config/shop-items";
 import { LeagueBadgeIcon } from "@/components/common/league-badge-icon";
+import { getLeagueLuxury } from "@/config/league-visuals";
 import { cn } from "@/lib/utils/cn";
 import type { LucideIcon } from "lucide-react";
 
@@ -51,6 +52,12 @@ export default async function ProfilePage() {
   const trophyByLeague = new Map(profile.trophies.map((t) => [t.leagueId, t]));
   const backgroundGradient = profile.background ? BACKGROUND_GRADIENTS[profile.background.assetKey] : null;
   const BadgeIcon = profile.badge ? BADGE_ICONS[BADGE_ICON_KEYS[profile.badge.assetKey]] : null;
+  const luxury = getLeagueLuxury(profile.league.current.themeKey);
+  const luxuryStyle = {
+    ...(luxury.level >= 2 ? { boxShadow: `0 0 30px -10px ${luxury.glowColor}` } : {}),
+    ...(luxury.level >= 3 ? { "--arena-glow-color": luxury.glowColor } : {}),
+    ...(luxury.level >= 4 ? { "--arena-shimmer-color": luxury.glowColor } : {}),
+  } as React.CSSProperties;
 
   return (
     <AppScreen nav>
@@ -69,9 +76,13 @@ export default async function ProfilePage() {
 
         <Card
           className={cn(
-            "overflow-hidden border-arena-primary/30 bg-gradient-to-b to-transparent",
-            backgroundGradient ?? "from-arena-primary/10",
+            "overflow-hidden border-2 bg-gradient-to-b to-transparent",
+            luxury.border,
+            backgroundGradient ?? luxury.headerGradient,
+            luxury.level >= 3 && "arena-glow-pulse",
+            luxury.level >= 4 && "arena-shimmer",
           )}
+          style={luxuryStyle}
         >
           <CardContent className="flex flex-col items-center gap-2 py-6 text-center">
             <div className="relative">
@@ -79,7 +90,7 @@ export default async function ProfilePage() {
                 displayName={profile.displayName}
                 avatarIconId={profile.selectedAvatarIconId}
                 photoUrl={profile.customAvatarUrl}
-                className="h-20 w-20 border-arena-primary text-2xl"
+                className={cn("h-20 w-20 text-2xl", luxury.avatarBorder)}
                 iconClassName="h-9 w-9"
               />
               {BadgeIcon && (
@@ -91,7 +102,8 @@ export default async function ProfilePage() {
             <p className="text-lg font-bold text-arena-white">{profile.displayName}</p>
             <Badge variant="gold">{title.name}</Badge>
             <div className="flex items-center gap-2">
-              <Badge variant="primary">
+              <Badge className={luxury.badgeClass}>
+                {luxury.level >= 4 && <Crown className="h-3 w-3" />}
                 <LeagueBadgeIcon themeKey={profile.league.current.themeKey} />
                 {profile.league.current.displayName}
               </Badge>
