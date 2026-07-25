@@ -135,6 +135,7 @@ model PlayerProfile {
   selectedFrameId      String?
   selectedBackgroundId String?
   selectedBadgeId      String?
+  selectedAvatarIconId String?
   showBotTag           Boolean  @default(true)
   reducedMotion        Boolean  @default(false)
   soundEnabled         Boolean  @default(true)

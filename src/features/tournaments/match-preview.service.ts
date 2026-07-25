@@ -34,6 +34,8 @@ export async function getMatchPreview(userId: string, matchId: string) {
     me: {
       displayName: me.displayName,
       leagueName: me.player?.currentLeague.displayName ?? null,
+      leagueThemeKey: me.player?.currentLeague.themeKey ?? null,
+      avatarIconId: me.player?.selectedAvatarIconId ?? null,
       winRate: myWinRate,
     },
     opponent: {
@@ -41,6 +43,8 @@ export async function getMatchPreview(userId: string, matchId: string) {
       displayName: opponent.displayName,
       isBot: opponent.type === "BOT",
       leagueName: opponent.player?.currentLeague.displayName ?? null,
+      leagueThemeKey: opponent.player?.currentLeague.themeKey ?? null,
+      avatarIconId: opponent.player?.selectedAvatarIconId ?? null,
       winRate: opponentWinRate,
       totalMatches: opponent.player?.totalMatches ?? null,
     },

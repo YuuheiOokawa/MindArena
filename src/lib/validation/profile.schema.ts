@@ -19,6 +19,7 @@ export type UpdateDisplayNameInput = z.infer<typeof updateDisplayNameSchema>;
 export const updateCosmeticsSchema = z.object({
   selectedFrameId: z.string().nullable().optional(),
   selectedTitleId: z.string().nullable().optional(),
+  selectedAvatarIconId: z.string().nullable().optional(),
 });
 
 export type UpdateCosmeticsInput = z.infer<typeof updateCosmeticsSchema>;

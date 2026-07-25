@@ -11,8 +11,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { GameRulesCard } from "@/components/common/game-rules-card";
+import { PlayerAvatar } from "@/components/common/player-avatar";
 import { getGameMeta } from "@/config/games";
-import { Bot, Dices, User } from "lucide-react";
+import { getLeagueBadgeColor } from "@/config/league-visuals";
+import { Bot, Dices, Gem } from "lucide-react";
 
 interface MatchPreview {
   matchId: string;
@@ -24,12 +26,16 @@ interface MatchPreview {
   me: {
     displayName: string;
     leagueName: string | null;
+    leagueThemeKey: string | null;
+    avatarIconId: string | null;
     winRate: number | null;
   };
   opponent: {
     displayName: string;
     isBot: boolean;
     leagueName: string | null;
+    leagueThemeKey: string | null;
+    avatarIconId: string | null;
     winRate: number | null;
     totalMatches: number | null;
   };
@@ -77,20 +83,32 @@ function PreMatchSession({ id, matchId }: { id: string; matchId: string }) {
         <Card className="border-arena-primary/25">
           <CardContent className="flex items-center justify-around py-5">
             <div className="flex flex-col items-center gap-1.5">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-arena-primary/50 bg-arena-surface-2">
-                <User className="h-7 w-7 text-arena-primary-soft" />
-              </div>
+              <PlayerAvatar displayName={preview.me.displayName} avatarIconId={preview.me.avatarIconId} className="h-16 w-16" iconClassName="h-7 w-7" />
               <p className="max-w-24 truncate text-sm font-semibold text-arena-white">{preview.me.displayName}</p>
-              <p className="text-xs text-arena-silver">{preview.me.leagueName ?? "—"}</p>
+              {preview.me.leagueName && (
+                <Badge variant="primary">
+                  <Gem className={`h-3 w-3 ${getLeagueBadgeColor(preview.me.leagueThemeKey ?? "")}`} />
+                  {preview.me.leagueName}
+                </Badge>
+              )}
               <p className="text-xs font-semibold text-arena-gold">勝率 {preview.me.winRate ?? 0}%</p>
             </div>
             <span className="text-sm font-black text-arena-silver/50">VS</span>
             <div className="flex flex-col items-center gap-1.5">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-arena-border bg-arena-surface-2">
-                {preview.opponent.isBot ? <Bot className="h-7 w-7 text-arena-silver" /> : <User className="h-7 w-7 text-arena-silver" />}
-              </div>
+              {preview.opponent.isBot ? (
+                <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-arena-border bg-arena-surface-2">
+                  <Bot className="h-7 w-7 text-arena-silver" />
+                </div>
+              ) : (
+                <PlayerAvatar displayName={preview.opponent.displayName} avatarIconId={preview.opponent.avatarIconId} className="h-16 w-16 border-arena-border" iconClassName="h-7 w-7" />
+              )}
               <p className="max-w-24 truncate text-sm font-semibold text-arena-white">{preview.opponent.displayName}</p>
-              <p className="text-xs text-arena-silver">{preview.opponent.leagueName ?? "—"}</p>
+              {preview.opponent.leagueName && (
+                <Badge variant="neutral">
+                  <Gem className={`h-3 w-3 ${getLeagueBadgeColor(preview.opponent.leagueThemeKey ?? "")}`} />
+                  {preview.opponent.leagueName}
+                </Badge>
+              )}
               <p className="text-xs font-semibold text-arena-gold">勝率 {preview.opponent.winRate ?? 0}%</p>
             </div>
           </CardContent>
@@ -105,7 +123,7 @@ function PreMatchSession({ id, matchId }: { id: string; matchId: string }) {
         <div className="flex flex-col gap-2">
           <p className="flex items-center gap-1.5 text-xs font-semibold text-arena-primary-soft">
             <Dices className="h-3.5 w-3.5" />
-            ランダムで選ばれたゲーム
+            今回の試合で選ばれたゲーム
           </p>
           {gameMeta ? <GameRulesCard game={gameMeta} /> : (
             <Card>

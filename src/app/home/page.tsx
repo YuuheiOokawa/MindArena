@@ -13,9 +13,11 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Bell, Bot, Coins, Mail, Megaphone, Swords, Trophy } from "lucide-react";
+import { Bell, Bot, Coins, Gem, Mail, Megaphone, Swords, Trophy } from "lucide-react";
 import { resumeHref } from "@/features/tournaments/resume-href";
 import { APP_CONFIG } from "@/config/app";
+import { PlayerAvatar } from "@/components/common/player-avatar";
+import { getLeagueBadgeColor } from "@/config/league-visuals";
 
 export default async function HomePage() {
   const session = await auth();
@@ -62,12 +64,11 @@ export default async function HomePage() {
         <Card className="border-arena-primary/25">
           <CardContent className="flex flex-col gap-3 py-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 border-arena-primary/50 bg-arena-surface-2 text-lg font-bold text-arena-primary-soft">
-                {profile.displayName.slice(0, 1).toUpperCase()}
-              </div>
+              <PlayerAvatar displayName={profile.displayName} avatarIconId={profile.selectedAvatarIconId} className="h-14 w-14 text-lg" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-base font-bold text-arena-white">{profile.displayName}</p>
-                <Badge variant="primary" className="mt-1">
+                <Badge variant="primary" className="mt-1 gap-1">
+                  <Gem className={`h-3 w-3 ${getLeagueBadgeColor(profile.league.current.themeKey)}`} />
                   {profile.league.current.displayName}
                 </Badge>
               </div>

@@ -2,15 +2,19 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/infrastructure/auth/auth";
 import { getMyAchievements, getMyGameStats, getMyProfile } from "@/features/profiles/profile.service";
+import { getMyWinRateTrend } from "@/features/profiles/match-history.service";
 import { listLeaguesWithUnlockStatus } from "@/features/leagues/league.service";
 import { AppScreen } from "@/components/layout/app-screen";
 import { StatTile } from "@/components/common/stat-tile";
 import { EmptyState } from "@/components/common/empty-state";
+import { PlayerAvatar } from "@/components/common/player-avatar";
+import { WinRateTrendChart } from "@/components/common/win-rate-trend-chart";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, Coins, Crown, Eye, Flame, Gem, Pencil, Settings, Shield, ShoppingBag, Skull, Sparkles, Star, Trophy, Users, Zap } from "lucide-react";
 import { TITLES } from "@/config/titles";
 import { BACKGROUND_GRADIENTS, BADGE_ICON_KEYS } from "@/config/shop-items";
+import { getLeagueBadgeColor } from "@/config/league-visuals";
 import { cn } from "@/lib/utils/cn";
 import type { LucideIcon } from "lucide-react";
 
@@ -36,10 +40,11 @@ export default async function ProfilePage() {
   if (!session?.user?.id) redirect("/login");
 
   const profile = await getMyProfile(session.user.id);
-  const [gameStats, achievements, leagues] = await Promise.all([
+  const [gameStats, achievements, leagues, winRateTrend] = await Promise.all([
     getMyGameStats(session.user.id),
     getMyAchievements(session.user.id),
     listLeaguesWithUnlockStatus(profile.totalPoints),
+    getMyWinRateTrend(session.user.id),
   ]);
 
   const title = TITLES.find((t) => t.id === profile.selectedTitleId) ?? TITLES[0];
@@ -70,9 +75,12 @@ export default async function ProfilePage() {
         >
           <CardContent className="flex flex-col items-center gap-2 py-6 text-center">
             <div className="relative">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-arena-primary bg-arena-surface-2 text-2xl font-bold text-arena-primary-soft">
-                {profile.displayName.slice(0, 1).toUpperCase()}
-              </div>
+              <PlayerAvatar
+                displayName={profile.displayName}
+                avatarIconId={profile.selectedAvatarIconId}
+                className="h-20 w-20 border-arena-primary text-2xl"
+                iconClassName="h-9 w-9"
+              />
               {BadgeIcon && (
                 <div className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-arena-surface bg-arena-gold/20">
                   <BadgeIcon className="h-3.5 w-3.5 text-arena-gold" />
@@ -82,7 +90,10 @@ export default async function ProfilePage() {
             <p className="text-lg font-bold text-arena-white">{profile.displayName}</p>
             <Badge variant="gold">{title.name}</Badge>
             <div className="flex items-center gap-2">
-              <Badge variant="primary">{profile.league.current.displayName}</Badge>
+              <Badge variant="primary">
+                <Gem className={`h-3 w-3 ${getLeagueBadgeColor(profile.league.current.themeKey)}`} />
+                {profile.league.current.displayName}
+              </Badge>
               <Badge variant="neutral">
                 <Sparkles className="mr-1 h-3 w-3" />
                 {profile.frame.current.name}
@@ -149,6 +160,11 @@ export default async function ProfilePage() {
           <StatTile label="優勝回数" value={profile.tournamentWins} />
           <StatTile label="決勝進出数" value={profile.finalsReached} />
         </div>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="text-sm font-semibold text-arena-silver">最近の成績推移</h2>
+          <WinRateTrendChart data={winRateTrend} />
+        </section>
 
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold text-arena-silver">ゲーム別勝率</h2>
