@@ -14,19 +14,31 @@ async function requireProfile(userId: string) {
 export async function listMyFriends(userId: string) {
   const profile = await requireProfile(userId);
   const rows = await friendshipRepository.listFriends(profile.id);
-  return rows.map((row) => ({ ...toFriendCard(row.friend), friendshipId: row.friendshipId, since: row.since }));
+  return rows.map((row) => ({
+    ...toFriendCard(row.friend, row.friend.user.username),
+    friendshipId: row.friendshipId,
+    since: row.since,
+  }));
 }
 
 export async function listIncomingFriendRequests(userId: string) {
   const profile = await requireProfile(userId);
   const rows = await friendshipRepository.listIncomingRequests(profile.id);
-  return rows.map((row) => ({ friendshipId: row.id, createdAt: row.createdAt, from: toFriendCard(row.requester) }));
+  return rows.map((row) => ({
+    friendshipId: row.id,
+    createdAt: row.createdAt,
+    from: toFriendCard(row.requester, row.requester.user.username),
+  }));
 }
 
 export async function listOutgoingFriendRequests(userId: string) {
   const profile = await requireProfile(userId);
   const rows = await friendshipRepository.listOutgoingRequests(profile.id);
-  return rows.map((row) => ({ friendshipId: row.id, createdAt: row.createdAt, to: toFriendCard(row.addressee) }));
+  return rows.map((row) => ({
+    friendshipId: row.id,
+    createdAt: row.createdAt,
+    to: toFriendCard(row.addressee, row.addressee.user.username),
+  }));
 }
 
 /** Looks up a player by exact username so a request can be sent; excludes the caller and reveals no unrelated accounts. */
@@ -51,5 +63,5 @@ export async function searchPlayerByUsername(userId: string, username: string) {
         ? "REQUEST_SENT"
         : "REQUEST_RECEIVED";
 
-  return { ...toFriendCard(targetProfile), relation, friendshipId: existing?.id ?? null };
+  return { ...toFriendCard(targetProfile, targetUser.username), relation, friendshipId: existing?.id ?? null };
 }

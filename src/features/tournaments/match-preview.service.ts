@@ -9,8 +9,8 @@ export async function getMatchPreview(userId: string, matchId: string) {
   const match = await prisma.tournamentMatch.findUniqueOrThrow({
     where: { id: matchId },
     include: {
-      player1: { include: { player: { include: { currentLeague: true } }, bot: true } },
-      player2: { include: { player: { include: { currentLeague: true } }, bot: true } },
+      player1: { include: { player: { include: { currentLeague: true, user: { select: { username: true } } } }, bot: true } },
+      player2: { include: { player: { include: { currentLeague: true, user: { select: { username: true } } } }, bot: true } },
       gameType: true,
       tournament: { include: { league: true } },
     },
@@ -33,6 +33,7 @@ export async function getMatchPreview(userId: string, matchId: string) {
     tournamentLeagueName: match.tournament.league.displayName,
     me: {
       displayName: me.displayName,
+      username: me.player?.user.username ?? null,
       leagueName: me.player?.currentLeague.displayName ?? null,
       leagueThemeKey: me.player?.currentLeague.themeKey ?? null,
       avatarIconId: me.player?.selectedAvatarIconId ?? null,
@@ -42,6 +43,9 @@ export async function getMatchPreview(userId: string, matchId: string) {
     opponent: {
       participantId: opponent.id,
       displayName: opponent.displayName,
+      // Every human opponent you can face is a friend — there's no random matchmaking in this
+      // app, only self, invited friends, and bots — so the username is always safe to show here.
+      username: opponent.player?.user.username ?? null,
       isBot: opponent.type === "BOT",
       leagueName: opponent.player?.currentLeague.displayName ?? null,
       leagueThemeKey: opponent.player?.currentLeague.themeKey ?? null,

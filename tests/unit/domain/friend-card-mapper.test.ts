@@ -12,20 +12,21 @@ const BASE_PROFILE = {
 
 describe("toFriendCard", () => {
   it("resolves a known selectedTitleId to its display name", () => {
-    const card = toFriendCard({ ...BASE_PROFILE, selectedTitleId: "champion" });
+    const card = toFriendCard({ ...BASE_PROFILE, selectedTitleId: "champion" }, "mind_player");
     expect(card.titleName).toBe("頂点の証");
   });
 
   it("falls back to null when no title is selected or the id is unknown", () => {
-    expect(toFriendCard({ ...BASE_PROFILE, selectedTitleId: null }).titleName).toBeNull();
-    expect(toFriendCard({ ...BASE_PROFILE, selectedTitleId: "not-a-real-title" }).titleName).toBeNull();
+    expect(toFriendCard({ ...BASE_PROFILE, selectedTitleId: null }, "mind_player").titleName).toBeNull();
+    expect(toFriendCard({ ...BASE_PROFILE, selectedTitleId: "not-a-real-title" }, "mind_player").titleName).toBeNull();
   });
 
   it("passes through the core profile fields untouched", () => {
-    const card = toFriendCard(BASE_PROFILE);
+    const card = toFriendCard(BASE_PROFILE, "mind_player");
     expect(card).toMatchObject({
       profileId: "profile-1",
       displayName: "Mind Player",
+      username: "mind_player",
       totalPoints: 1200,
       league: { code: "SILVER", displayName: "シルバーリーグ" },
     });

@@ -25,6 +25,7 @@ interface MatchPreview {
   tournamentLeagueName: string;
   me: {
     displayName: string;
+    username: string | null;
     leagueName: string | null;
     leagueThemeKey: string | null;
     avatarIconId: string | null;
@@ -33,6 +34,7 @@ interface MatchPreview {
   };
   opponent: {
     displayName: string;
+    username: string | null;
     isBot: boolean;
     leagueName: string | null;
     leagueThemeKey: string | null;
@@ -117,6 +119,9 @@ function PreMatchSession({ id, matchId }: { id: string; matchId: string }) {
                 />
               )}
               <p className="max-w-24 truncate text-sm font-semibold text-arena-white">{preview.opponent.displayName}</p>
+              {preview.opponent.username && (
+                <p className="max-w-24 truncate text-[11px] text-arena-silver/70">@{preview.opponent.username}</p>
+              )}
               {preview.opponent.leagueName && (
                 <Badge variant="neutral">
                   <LeagueBadgeIcon themeKey={preview.opponent.leagueThemeKey ?? ""} />

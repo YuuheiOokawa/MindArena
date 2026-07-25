@@ -17,6 +17,7 @@ import { Search, UserPlus, UserCheck, UserX, Users, Inbox, Swords, Check, X } fr
 interface FriendCard {
   profileId: string;
   displayName: string;
+  username: string;
   totalPoints: number;
   league: { code: string; displayName: string };
   titleName: string | null;
@@ -287,6 +288,7 @@ export default function FriendsPage() {
               <div className="flex items-center justify-between rounded-xl border border-arena-border bg-arena-surface-2 px-3 py-2.5">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-arena-white">{searchResult.displayName}</p>
+                  <p className="truncate text-xs text-arena-silver/70">@{searchResult.username}</p>
                   <p className="truncate text-xs text-arena-silver">{searchResult.league.displayName}</p>
                 </div>
                 <SearchActionButton
@@ -324,6 +326,7 @@ export default function FriendsPage() {
                   <CardContent className="flex items-center justify-between py-3">
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-arena-white">{friend.displayName}</p>
+                      <p className="truncate text-xs text-arena-silver/70">@{friend.username}</p>
                       <div className="mt-1 flex items-center gap-1.5">
                         <Badge variant="primary">{friend.league.displayName}</Badge>
                         {friend.titleName && <Badge variant="gold">{friend.titleName}</Badge>}
@@ -368,6 +371,7 @@ export default function FriendsPage() {
                     <CardContent className="flex items-center justify-between py-3">
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-arena-white">{req.from.displayName}</p>
+                        <p className="truncate text-xs text-arena-silver/70">@{req.from.username}</p>
                         <Badge variant="primary" className="mt-1">
                           {req.from.league.displayName}
                         </Badge>
@@ -408,6 +412,7 @@ export default function FriendsPage() {
                     <CardContent className="flex items-center justify-between py-3">
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-arena-white">{req.to.displayName}</p>
+                        <p className="truncate text-xs text-arena-silver/70">@{req.to.username}</p>
                         <Badge variant="neutral" className="mt-1">
                           承認待ち
                         </Badge>
@@ -440,6 +445,7 @@ export default function FriendsPage() {
                     <CardContent className="flex items-center justify-between py-3">
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-arena-white">{invite.from.displayName}</p>
+                        <p className="truncate text-xs text-arena-silver/70">@{invite.from.username}</p>
                         <Badge variant="primary" className="mt-1">
                           {invite.leagueName}
                         </Badge>
@@ -480,6 +486,7 @@ export default function FriendsPage() {
                     <CardContent className="flex items-center justify-between py-3">
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-arena-white">{c.from.displayName}</p>
+                        <p className="truncate text-xs text-arena-silver/70">@{c.from.username}</p>
                         <Badge variant="primary" className="mt-1">
                           {c.from.league.displayName}
                         </Badge>
@@ -520,6 +527,7 @@ export default function FriendsPage() {
                     <CardContent className="flex items-center justify-between py-3">
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-arena-white">{c.to.displayName}</p>
+                        <p className="truncate text-xs text-arena-silver/70">@{c.to.username}</p>
                         <Badge variant="neutral" className="mt-1">
                           返答待ち
                         </Badge>

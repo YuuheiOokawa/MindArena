@@ -8,6 +8,7 @@ const PROFILE_CARD_SELECT = {
   selectedTitleId: true,
   selectedFrameId: true,
   currentLeague: { select: { code: true, displayName: true } },
+  user: { select: { username: true } },
 } as const;
 
 export const tournamentInviteRepository = {

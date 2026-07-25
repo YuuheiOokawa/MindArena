@@ -25,6 +25,7 @@ interface LeagueSummary {
 interface InvitableFriend {
   profileId: string;
   displayName: string;
+  username: string;
   league: { displayName: string };
 }
 
@@ -150,6 +151,7 @@ function FriendPicker({ leagueId }: { leagueId: string }) {
                     <CardContent className="flex items-center justify-between py-3">
                       <div>
                         <p className="text-sm font-semibold text-arena-white">{friend.displayName}</p>
+                        <p className="text-xs text-arena-silver/70">@{friend.username}</p>
                         <p className="text-xs text-arena-silver">{friend.league.displayName}</p>
                       </div>
                       <div

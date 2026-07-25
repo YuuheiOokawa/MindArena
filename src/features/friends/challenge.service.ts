@@ -42,13 +42,21 @@ export async function sendChallenge(userId: string, opponentProfileId: string) {
 export async function listIncomingChallenges(userId: string) {
   const profile = await requireProfile(userId);
   const rows = await friendChallengeRepository.listIncoming(profile.id);
-  return rows.map((row) => ({ challengeId: row.id, createdAt: row.createdAt, from: toFriendCard(row.challenger) }));
+  return rows.map((row) => ({
+    challengeId: row.id,
+    createdAt: row.createdAt,
+    from: toFriendCard(row.challenger, row.challenger.user.username),
+  }));
 }
 
 export async function listOutgoingChallenges(userId: string) {
   const profile = await requireProfile(userId);
   const rows = await friendChallengeRepository.listOutgoing(profile.id);
-  return rows.map((row) => ({ challengeId: row.id, createdAt: row.createdAt, to: toFriendCard(row.opponent) }));
+  return rows.map((row) => ({
+    challengeId: row.id,
+    createdAt: row.createdAt,
+    to: toFriendCard(row.opponent, row.opponent.user.username),
+  }));
 }
 
 /** Accepting creates a 2-player Tournament (maxPlayers=2) reusing the normal bracket/match/session

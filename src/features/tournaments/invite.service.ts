@@ -88,7 +88,7 @@ export async function listIncomingTournamentInvites(userId: string) {
       createdAt: row.createdAt,
       tournamentId: row.tournament.id,
       leagueName: row.tournament.league.displayName,
-      from: toFriendCard(row.inviter),
+      from: toFriendCard(row.inviter, row.inviter.user.username),
     }));
 }
 
@@ -151,7 +151,7 @@ export async function listInvitableFriendsForLeague(userId: string, leagueId: st
   const league = await leagueRepository.findById(leagueId);
   if (!league) throw new AppError("NOT_FOUND", "リーグが見つかりません。");
   const rows = await findInvitableFriends(profile.id, league);
-  return rows.map((row) => toFriendCard(row.friend));
+  return rows.map((row) => toFriendCard(row.friend, row.friend.user.username));
 }
 
 export async function declineTournamentInvite(userId: string, inviteId: string) {
