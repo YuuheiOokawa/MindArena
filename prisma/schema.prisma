@@ -136,6 +136,10 @@ model PlayerProfile {
   selectedBackgroundId String?
   selectedBadgeId      String?
   selectedAvatarIconId String?
+  /** A user-uploaded avatar photo, stored as a small base64 data URI (client resizes/compresses
+   * to a square thumbnail before upload — no object storage is configured for this app yet).
+   * Takes priority over selectedAvatarIconId when set. */
+  customAvatarUrl      String?
   showBotTag           Boolean  @default(true)
   reducedMotion        Boolean  @default(false)
   soundEnabled         Boolean  @default(true)
@@ -154,6 +158,8 @@ model PlayerProfile {
   cosmeticPurchases    CosmeticPurchase[]
   challengesSent       FriendChallenge[]       @relation("ChallengeSent")
   challengesReceived   FriendChallenge[]       @relation("ChallengeReceived")
+  tournamentInvitesSent     TournamentInvite[]  @relation("TournamentInviteSent")
+  tournamentInvitesReceived TournamentInvite[]  @relation("TournamentInviteReceived")
 
   @@index([totalPoints])
   @@map("player_profiles")
@@ -361,9 +367,40 @@ model Tournament {
   participants    TournamentParticipant[]
   matches         TournamentMatch[]
   friendChallenge FriendChallenge?
+  invites         TournamentInvite[]
 
   @@index([leagueId, status])
   @@map("tournaments")
+}
+
+enum TournamentInviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+/**
+ * Sent when a player joins a tournament (or opens a friend-only lobby) to friends who are
+ * eligible to play in that league (same league, or a higher one — see
+ * features/tournaments/invite.service.ts). The tournament stays RECRUITING and skips the
+ * usual instant BOT-fill while invites are pending, giving invitees a real window to join the
+ * SAME bracket instead of each starting their own solo BOT-filled tournament.
+ */
+model TournamentInvite {
+  id           String                 @id @default(cuid())
+  tournamentId String
+  tournament   Tournament             @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  inviterId    String
+  inviter      PlayerProfile          @relation("TournamentInviteSent", fields: [inviterId], references: [id], onDelete: Cascade)
+  inviteeId    String
+  invitee      PlayerProfile          @relation("TournamentInviteReceived", fields: [inviteeId], references: [id], onDelete: Cascade)
+  status       TournamentInviteStatus @default(PENDING)
+  createdAt    DateTime               @default(now())
+
+  @@unique([tournamentId, inviteeId])
+  @@index([inviteeId, status])
+  @@map("tournament_invites")
 }
 
 model TournamentParticipant {

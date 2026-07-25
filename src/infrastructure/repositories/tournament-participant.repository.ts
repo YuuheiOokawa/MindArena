@@ -37,6 +37,12 @@ export const tournamentParticipantRepository = {
     return prisma.tournamentParticipant.findUniqueOrThrow({ where: { id }, include: { player: true, bot: true } });
   },
 
+  /** The participant who originally created the tournament — always seed 1, the sole entrant
+   * added before anyone else joins or gets BOT-filled in. Used to gate "start now" to the host. */
+  async findCreator(tournamentId: string) {
+    return prisma.tournamentParticipant.findFirst({ where: { tournamentId, seed: 1 } });
+  },
+
   async isPlayerAlreadyIn(tournamentId: string, playerId: string) {
     const existing = await prisma.tournamentParticipant.findUnique({
       where: { tournamentId_playerId: { tournamentId, playerId } },

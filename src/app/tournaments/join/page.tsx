@@ -10,7 +10,8 @@ import { EmptyState } from "@/components/common/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dices, Lock, Users } from "lucide-react";
+import { Dices, Lock, UserPlus, Users } from "lucide-react";
+import Link from "next/link";
 
 interface LeagueSummary {
   id: string;
@@ -148,10 +149,21 @@ function JoinConfirm({ leagueId }: { leagueId: string }) {
           <CardContent className="flex items-center gap-3 py-4">
             <Users className="h-5 w-5 text-arena-silver" />
             <p className="text-xs text-arena-silver">
-              32人制シングルエリミネーション。参加人数が不足している場合はBOTが自動で補充されます。
+              32人制シングルエリミネーション。同じリーグ以上のフレンドには自動で招待が届き、参加人数が不足している場合はBOTが自動で補充されます。
             </p>
           </CardContent>
         </Card>
+
+        <Link
+          href={`/tournaments/friend-lobby?league=${leagueId}`}
+          className="flex items-center justify-between rounded-2xl border border-arena-border bg-white/[0.03] px-4 py-3.5 text-sm font-medium text-arena-white transition-colors hover:border-arena-primary/40"
+        >
+          <span className="flex items-center gap-2">
+            <UserPlus className="h-4 w-4 text-arena-primary-soft" />
+            招待するフレンドを自分で選ぶ
+          </span>
+          <span className="text-arena-silver/60">›</span>
+        </Link>
 
         <Card className="border-arena-primary/20 bg-arena-primary/5">
           <CardContent className="flex items-center gap-3 py-4">

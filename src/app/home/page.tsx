@@ -6,6 +6,7 @@ import { getMyMatchHistory } from "@/features/profiles/match-history.service";
 import { resolveResumeState } from "@/features/tournaments/resume";
 import { listIncomingFriendRequests } from "@/features/friends/friend.service";
 import { listIncomingChallenges } from "@/features/friends/challenge.service";
+import { listIncomingTournamentInvites } from "@/features/tournaments/invite.service";
 import { AppScreen } from "@/components/layout/app-screen";
 import { StatTile } from "@/components/common/stat-tile";
 import { EmptyState } from "@/components/common/empty-state";
@@ -23,12 +24,13 @@ export default async function HomePage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const [profile, recent, resume, incomingFriendRequests, incomingChallenges] = await Promise.all([
+  const [profile, recent, resume, incomingFriendRequests, incomingChallenges, incomingTournamentInvites] = await Promise.all([
     getMyProfile(session.user.id),
     getMyMatchHistory(session.user.id, undefined, 3),
     resolveResumeState(session.user.id),
     listIncomingFriendRequests(session.user.id),
     listIncomingChallenges(session.user.id),
+    listIncomingTournamentInvites(session.user.id),
   ]);
 
   // "champion" is a one-time celebration screen reached right after the winning match, not a
@@ -54,7 +56,7 @@ export default async function HomePage() {
               className="relative flex h-9 w-9 items-center justify-center rounded-full text-arena-silver/80 hover:text-arena-white"
             >
               <Mail className="h-4 w-4" />
-              {(incomingFriendRequests.length > 0 || incomingChallenges.length > 0) && (
+              {(incomingFriendRequests.length > 0 || incomingChallenges.length > 0 || incomingTournamentInvites.length > 0) && (
                 <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-arena-danger" />
               )}
             </Link>
@@ -64,7 +66,12 @@ export default async function HomePage() {
         <Card className="border-arena-primary/25">
           <CardContent className="flex flex-col gap-3 py-4">
             <div className="flex items-center gap-3">
-              <PlayerAvatar displayName={profile.displayName} avatarIconId={profile.selectedAvatarIconId} className="h-14 w-14 text-lg" />
+              <PlayerAvatar
+                displayName={profile.displayName}
+                avatarIconId={profile.selectedAvatarIconId}
+                photoUrl={profile.customAvatarUrl}
+                className="h-14 w-14 text-lg"
+              />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-base font-bold text-arena-white">{profile.displayName}</p>
                 <Badge variant="primary" className="mt-1 gap-1">

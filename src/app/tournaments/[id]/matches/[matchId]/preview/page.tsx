@@ -28,6 +28,7 @@ interface MatchPreview {
     leagueName: string | null;
     leagueThemeKey: string | null;
     avatarIconId: string | null;
+    photoUrl: string | null;
     winRate: number | null;
   };
   opponent: {
@@ -36,6 +37,7 @@ interface MatchPreview {
     leagueName: string | null;
     leagueThemeKey: string | null;
     avatarIconId: string | null;
+    photoUrl: string | null;
     winRate: number | null;
     totalMatches: number | null;
   };
@@ -83,7 +85,13 @@ function PreMatchSession({ id, matchId }: { id: string; matchId: string }) {
         <Card className="border-arena-primary/25">
           <CardContent className="flex items-center justify-around py-5">
             <div className="flex flex-col items-center gap-1.5">
-              <PlayerAvatar displayName={preview.me.displayName} avatarIconId={preview.me.avatarIconId} className="h-16 w-16" iconClassName="h-7 w-7" />
+              <PlayerAvatar
+                displayName={preview.me.displayName}
+                avatarIconId={preview.me.avatarIconId}
+                photoUrl={preview.me.photoUrl}
+                className="h-16 w-16"
+                iconClassName="h-7 w-7"
+              />
               <p className="max-w-24 truncate text-sm font-semibold text-arena-white">{preview.me.displayName}</p>
               {preview.me.leagueName && (
                 <Badge variant="primary">
@@ -100,7 +108,13 @@ function PreMatchSession({ id, matchId }: { id: string; matchId: string }) {
                   <Bot className="h-7 w-7 text-arena-silver" />
                 </div>
               ) : (
-                <PlayerAvatar displayName={preview.opponent.displayName} avatarIconId={preview.opponent.avatarIconId} className="h-16 w-16 border-arena-border" iconClassName="h-7 w-7" />
+                <PlayerAvatar
+                  displayName={preview.opponent.displayName}
+                  avatarIconId={preview.opponent.avatarIconId}
+                  photoUrl={preview.opponent.photoUrl}
+                  className="h-16 w-16 border-arena-border"
+                  iconClassName="h-7 w-7"
+                />
               )}
               <p className="max-w-24 truncate text-sm font-semibold text-arena-white">{preview.opponent.displayName}</p>
               {preview.opponent.leagueName && (

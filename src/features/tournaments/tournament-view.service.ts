@@ -1,12 +1,20 @@
 import { prisma } from "@/infrastructure/database/prisma";
 import { tournamentMatchRepository } from "@/infrastructure/repositories/tournament-match.repository";
+import { tournamentInviteRepository } from "@/infrastructure/repositories/tournament-invite.repository";
 import { playerProfileRepository } from "@/infrastructure/repositories/player-profile.repository";
 import { AppError } from "@/lib/errors/app-error";
 import { BASE_CHAMPION_PRIZE } from "@/config/points";
+import { TournamentStatus } from "@/domain/enums";
+import { finalizeIfDue } from "./invite.service";
 
 export async function getTournamentView(userId: string, tournamentId: string) {
   const profile = await playerProfileRepository.findByUserId(userId);
   if (!profile) throw new AppError("NOT_FOUND", "プロフィールが見つかりません。");
+
+  // Opportunistic finalize: a RECRUITING tournament nobody has re-fetched since its recruiting
+  // window elapsed just sits there until the next poll — this IS that check, run before we read
+  // the tournament back out so a client polling this endpoint always sees up-to-date status.
+  await finalizeIfDue(tournamentId);
 
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
@@ -15,6 +23,11 @@ export async function getTournamentView(userId: string, tournamentId: string) {
   if (!tournament) throw new AppError("NOT_FOUND", "トーナメントが見つかりません。");
 
   const myParticipant = tournament.participants.find((p) => p.playerId === profile.id);
+  const isCreator = tournament.participants.find((p) => p.seed === 1)?.playerId === profile.id;
+  const pendingInvites =
+    tournament.status === TournamentStatus.RECRUITING
+      ? await tournamentInviteRepository.countPendingForTournament(tournamentId)
+      : 0;
   const matches = await tournamentMatchRepository.listForTournament(tournamentId);
 
   const rounds = new Map<number, typeof matches>();
@@ -35,6 +48,11 @@ export async function getTournamentView(userId: string, tournamentId: string) {
     participantCount: tournament.participants.length,
     myParticipantId: myParticipant?.id ?? null,
     winnerParticipantId: tournament.winnerParticipantId,
+    isCreator,
+    pendingInvites,
+    joinedPlayers: tournament.participants
+      .filter((p) => p.type === "HUMAN")
+      .map((p) => ({ name: p.displayName, isMe: p.playerId === profile.id })),
     rounds: Array.from(rounds.entries())
       .sort(([a], [b]) => a - b)
       .map(([round, roundMatches]) => ({

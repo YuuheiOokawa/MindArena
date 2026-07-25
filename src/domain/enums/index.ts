@@ -80,6 +80,13 @@ export enum FriendChallengeStatus {
   DECLINED = "DECLINED",
 }
 
+export enum TournamentInviteStatus {
+  PENDING = "PENDING",
+  ACCEPTED = "ACCEPTED",
+  DECLINED = "DECLINED",
+  EXPIRED = "EXPIRED",
+}
+
 export enum TournamentRound {
   ROUND_OF_32 = 1,
   ROUND_OF_16 = 2,

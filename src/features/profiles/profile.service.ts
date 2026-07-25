@@ -45,6 +45,7 @@ export async function getMyProfile(userId: string) {
     selectedBackgroundId: profile.selectedBackgroundId,
     selectedBadgeId: profile.selectedBadgeId,
     selectedAvatarIconId: profile.selectedAvatarIconId,
+    customAvatarUrl: profile.customAvatarUrl,
     showBotTag: profile.showBotTag,
     reducedMotion: profile.reducedMotion,
     soundEnabled: profile.soundEnabled,

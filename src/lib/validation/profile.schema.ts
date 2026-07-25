@@ -20,6 +20,13 @@ export const updateCosmeticsSchema = z.object({
   selectedFrameId: z.string().nullable().optional(),
   selectedTitleId: z.string().nullable().optional(),
   selectedAvatarIconId: z.string().nullable().optional(),
+  // Base64 data URI of a client-resized square thumbnail — generous cap as a backstop against an
+  // oversized payload bypassing the client-side resize, not a precise byte budget.
+  customAvatarUrl: z
+    .string()
+    .max(400_000, "画像サイズが大きすぎます。")
+    .nullable()
+    .optional(),
 });
 
 export type UpdateCosmeticsInput = z.infer<typeof updateCosmeticsSchema>;

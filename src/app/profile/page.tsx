@@ -78,6 +78,7 @@ export default async function ProfilePage() {
               <PlayerAvatar
                 displayName={profile.displayName}
                 avatarIconId={profile.selectedAvatarIconId}
+                photoUrl={profile.customAvatarUrl}
                 className="h-20 w-20 border-arena-primary text-2xl"
                 iconClassName="h-9 w-9"
               />

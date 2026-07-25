@@ -6,6 +6,7 @@ import { apiClient, ApiClientError } from "@/lib/api-client";
 import { AppScreen } from "@/components/layout/app-screen";
 import { ErrorState } from "@/components/common/error-state";
 import { ProgressBar } from "@/components/ui/progress-bar";
+import { Button } from "@/components/ui/button";
 import { CheckCircle2, Users } from "lucide-react";
 
 interface TournamentView {
@@ -13,6 +14,9 @@ interface TournamentView {
   status: string;
   participantCount: number;
   maxPlayers: number;
+  isCreator: boolean;
+  pendingInvites: number;
+  joinedPlayers: { name: string; isMe: boolean }[];
 }
 
 export default function MatchmakingPage({ params }: { params: Promise<{ id: string }> }) {
@@ -21,6 +25,7 @@ export default function MatchmakingPage({ params }: { params: Promise<{ id: stri
   const [view, setView] = useState<TournamentView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [starting, setStarting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,10 +54,21 @@ export default function MatchmakingPage({ params }: { params: Promise<{ id: stri
     };
   }, [id, router]);
 
+  async function handleStartNow() {
+    setStarting(true);
+    try {
+      await apiClient.post(`/api/tournaments/${id}/start-now`);
+    } catch (e) {
+      setError(e instanceof ApiClientError ? e.message : "開始に失敗しました。");
+      setStarting(false);
+    }
+  }
+
   if (error) return <AppScreen><ErrorState message={error} /></AppScreen>;
 
   const count = view?.participantCount ?? 1;
   const max = view?.maxPlayers ?? 32;
+  const invitedFriendsWaiting = view && view.pendingInvites > 0;
 
   return (
     <AppScreen>
@@ -64,9 +80,34 @@ export default function MatchmakingPage({ params }: { params: Promise<{ id: stri
           <p className="text-2xl font-bold tabular-nums text-arena-white">
             {count} <span className="text-arena-silver">/ {max}</span>
           </p>
-          <p className="mt-1 text-sm text-arena-silver">{ready ? "対戦表を生成しています…" : "参加者を集めています…（不足分はBOTが補充されます）"}</p>
+          <p className="mt-1 text-sm text-arena-silver">
+            {ready
+              ? "対戦表を生成しています…"
+              : invitedFriendsWaiting
+                ? `フレンドの参加を待っています…（残り${view!.pendingInvites}人・不足分はBOTが補充されます）`
+                : "参加者を集めています…（不足分はBOTが補充されます）"}
+          </p>
         </div>
         <ProgressBar value={(count / max) * 100} className="w-full max-w-xs" />
+
+        {view && view.joinedPlayers.length > 1 && !ready && (
+          <div className="flex flex-wrap items-center justify-center gap-1.5">
+            {view.joinedPlayers.map((p) => (
+              <span
+                key={p.name}
+                className="rounded-full border border-arena-border bg-arena-surface-2 px-2.5 py-1 text-[11px] text-arena-silver"
+              >
+                {p.isMe ? "あなた" : p.name}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {view?.isCreator && !ready && (
+          <Button variant="secondary" onClick={handleStartNow} disabled={starting} className="w-full max-w-xs">
+            {starting ? "開始しています…" : "今すぐ開始する"}
+          </Button>
+        )}
       </div>
     </AppScreen>
   );

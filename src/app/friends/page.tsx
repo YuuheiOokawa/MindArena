@@ -56,6 +56,14 @@ interface OutgoingChallenge {
   to: FriendCard;
 }
 
+interface IncomingTournamentInvite {
+  inviteId: string;
+  createdAt: string;
+  tournamentId: string;
+  leagueName: string;
+  from: FriendCard;
+}
+
 type Tab = "friends" | "requests" | "battles";
 
 export default function FriendsPage() {
@@ -66,6 +74,7 @@ export default function FriendsPage() {
   const [outgoing, setOutgoing] = useState<OutgoingRequest[] | null>(null);
   const [incomingChallenges, setIncomingChallenges] = useState<IncomingChallenge[] | null>(null);
   const [outgoingChallenges, setOutgoingChallenges] = useState<OutgoingChallenge[] | null>(null);
+  const [tournamentInvites, setTournamentInvites] = useState<IncomingTournamentInvite[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
@@ -77,16 +86,18 @@ export default function FriendsPage() {
   async function loadAll() {
     setError(null);
     try {
-      const [friendList, requests, challenges] = await Promise.all([
+      const [friendList, requests, challenges, invites] = await Promise.all([
         apiClient.get<FriendEntry[]>("/api/friends"),
         apiClient.get<{ incoming: IncomingRequest[]; outgoing: OutgoingRequest[] }>("/api/friends/requests"),
         apiClient.get<{ incoming: IncomingChallenge[]; outgoing: OutgoingChallenge[] }>("/api/friends/challenges"),
+        apiClient.get<IncomingTournamentInvite[]>("/api/tournaments/invites"),
       ]);
       setFriends(friendList);
       setIncoming(requests.incoming);
       setOutgoing(requests.outgoing);
       setIncomingChallenges(challenges.incoming);
       setOutgoingChallenges(challenges.outgoing);
+      setTournamentInvites(invites);
     } catch (e) {
       setError(e instanceof ApiClientError ? e.message : "読み込みに失敗しました。");
     }
@@ -113,6 +124,10 @@ export default function FriendsPage() {
         setIncomingChallenges(challenges.incoming);
         setOutgoingChallenges(challenges.outgoing);
       })
+      .catch((e) => !cancelled && setError(e instanceof ApiClientError ? e.message : "読み込みに失敗しました。"));
+    apiClient
+      .get<IncomingTournamentInvite[]>("/api/tournaments/invites")
+      .then((invites) => !cancelled && setTournamentInvites(invites))
       .catch((e) => !cancelled && setError(e instanceof ApiClientError ? e.message : "読み込みに失敗しました。"));
     return () => {
       cancelled = true;
@@ -207,9 +222,38 @@ export default function FriendsPage() {
     }
   }
 
-  const loading = friends === null || incoming === null || outgoing === null || incomingChallenges === null || outgoingChallenges === null;
+  async function acceptTournamentInvite(inviteId: string) {
+    setActionPending(inviteId);
+    try {
+      const result = await apiClient.post<{ tournamentId: string }>(`/api/tournaments/invites/${inviteId}/accept`);
+      router.push(`/tournaments/${result.tournamentId}/matchmaking`);
+    } catch (e) {
+      setError(e instanceof ApiClientError ? e.message : "参加に失敗しました。");
+      setActionPending(null);
+    }
+  }
+
+  async function declineTournamentInvite(inviteId: string) {
+    setActionPending(inviteId);
+    try {
+      await apiClient.delete(`/api/tournaments/invites/${inviteId}`);
+      await loadAll();
+    } catch (e) {
+      setError(e instanceof ApiClientError ? e.message : "操作に失敗しました。");
+    } finally {
+      setActionPending(null);
+    }
+  }
+
+  const loading =
+    friends === null ||
+    incoming === null ||
+    outgoing === null ||
+    incomingChallenges === null ||
+    outgoingChallenges === null ||
+    tournamentInvites === null;
   const pendingRequestCount = (incoming?.length ?? 0) + (outgoing?.length ?? 0);
-  const pendingBattleCount = (incomingChallenges?.length ?? 0) + (outgoingChallenges?.length ?? 0);
+  const pendingBattleCount = (incomingChallenges?.length ?? 0) + (outgoingChallenges?.length ?? 0) + (tournamentInvites?.length ?? 0);
 
   return (
     <AppScreen nav>
@@ -386,6 +430,46 @@ export default function FriendsPage() {
 
         {!error && !loading && tab === "battles" && (
           <div className="flex flex-col gap-4">
+            <section className="flex flex-col gap-2">
+              <h2 className="text-xs font-semibold text-arena-silver">受け取った大会招待</h2>
+              {tournamentInvites!.length === 0 ? (
+                <EmptyState icon={Users} title="受け取った大会招待はありません" />
+              ) : (
+                tournamentInvites!.map((invite) => (
+                  <Card key={invite.inviteId}>
+                    <CardContent className="flex items-center justify-between py-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-arena-white">{invite.from.displayName}</p>
+                        <Badge variant="primary" className="mt-1">
+                          {invite.leagueName}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="gold"
+                          size="sm"
+                          onClick={() => acceptTournamentInvite(invite.inviteId)}
+                          disabled={actionPending === invite.inviteId}
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                          参加
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => declineTournamentInvite(invite.inviteId)}
+                          disabled={actionPending === invite.inviteId}
+                          aria-label="辞退"
+                        >
+                          <X className="h-4 w-4 text-arena-danger" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </section>
+
             <section className="flex flex-col gap-2">
               <h2 className="text-xs font-semibold text-arena-silver">受け取った対戦申し込み</h2>
               {incomingChallenges!.length === 0 ? (
