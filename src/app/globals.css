@@ -124,6 +124,23 @@ body {
   animation: arena-shake-once 0.5s ease-in-out 0.4s both;
 }
 
+/* Bracket "advance" effect: a round's match cards rise up into place the first time that round
+   is viewed, echoing the round-1 winners moving up into their round-2 slot. Stagger delay is set
+   per-card via --arena-rise-delay. */
+@keyframes arena-rise-in {
+  0% {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.arena-rise-in {
+  animation: arena-rise-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) var(--arena-rise-delay, 0s) both;
+}
+
 @keyframes arena-confetti-fall {
   0% {
     opacity: 0;
@@ -152,6 +169,7 @@ body {
   .arena-pop-in,
   .arena-glow-pulse,
   .arena-shake-once,
+  .arena-rise-in,
   .arena-confetti-piece {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;

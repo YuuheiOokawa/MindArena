@@ -20,7 +20,9 @@ export function getE2eTestBotAction(
     case "final-prediction":
       return { ...base, actionType: "CHOOSE", actionData: { move: "GUARD" } };
     case "minority-choice":
-      return { ...base, actionType: "CHOOSE", actionData: { choice: "A" } };
+      return phase === "CHOOSE"
+        ? { ...base, actionType: "CHOOSE", actionData: { choice: "A" } }
+        : { ...base, actionType: "DECLARE", actionData: { choice: "A" } };
     case "number-bluff":
       return phase === "RESPOND"
         ? { ...base, actionType: "RESPOND", actionData: { believe: true } }
@@ -34,7 +36,8 @@ export function getE2eTestBotAction(
 export const E2E_WINNING_HUMAN_ACTION: Record<string, { actionType: string; actionData: unknown } | ((phase: string) => { actionType: string; actionData: unknown })> = {
   "trust-or-betray": { actionType: "CHOOSE", actionData: { choice: "BETRAY" } },
   "final-prediction": { actionType: "CHOOSE", actionData: { move: "READ" } },
-  "minority-choice": { actionType: "CHOOSE", actionData: { choice: "B" } },
+  "minority-choice": (phase: string) =>
+    phase === "CHOOSE" ? { actionType: "CHOOSE", actionData: { choice: "B" } } : { actionType: "DECLARE", actionData: { choice: "B" } },
   "number-bluff": (phase: string) =>
     phase === "RESPOND"
       ? { actionType: "RESPOND", actionData: { believe: true } }

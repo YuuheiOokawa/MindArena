@@ -72,6 +72,9 @@ export default function BracketPage({ params }: { params: Promise<{ id: string }
   // Set once from the URL on first render (never re-derived from a later searchParams change —
   // dismissing clears the query param via router.replace, which must not resurrect this).
   const [showAdvance, setShowAdvance] = useState(() => searchParams.get("advanced") === "1");
+  // The round rendered on the previous commit — used to detect "just switched to a new round" so
+  // its rise-in entrance plays once, not on every poll refresh of the same round's data.
+  const [prevRoundNumber, setPrevRoundNumber] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     let cancelled = false;
@@ -135,6 +138,16 @@ export default function BracketPage({ params }: { params: Promise<{ id: string }
   const myMatch = currentRoundData?.matches.find((m) => m.involvesMe);
   const myMatchPlayable = myMatch && (myMatch.status === "READY" || myMatch.status === "IN_PROGRESS");
 
+  // Round 1 has no predecessor to "rise up" from — only round 2+ gets the advance entrance, and
+  // only on the render where the active round just changed (a poll refresh of the same round's
+  // data must not replay it). Adjusting state during render, per React's documented pattern for
+  // "reset/derive state when a prop changes" — this bails out and re-renders before committing.
+  if (activeRound && activeRound.round !== prevRoundNumber) {
+    setPrevRoundNumber(activeRound.round);
+  }
+  const playAdvanceAnimation = Boolean(activeRound) && activeRound!.round > 1 && activeRound!.round !== prevRoundNumber;
+  const previousRoundLabel = activeRound ? (ROUND_LABELS[activeRound.round - 1] ?? `第${activeRound.round - 1}ラウンド`) : "";
+
   return (
     <AppScreen nav header={<FocusHeader title={view.leagueName} backHref="/home" />}>
       <div className="flex flex-col gap-4 px-4 pb-8 pt-4">
@@ -186,16 +199,30 @@ export default function BracketPage({ params }: { params: Promise<{ id: string }
         )}
 
         <div className="flex flex-col gap-2">
-          {activeRound?.matches.map((match) => (
-            <Card key={match.id} className={match.involvesMe ? "border-arena-primary/50" : ""}>
+          {activeRound?.matches.map((match, index) => (
+            <Card
+              key={match.id}
+              className={cn(match.involvesMe ? "border-arena-primary/50" : "", playAdvanceAnimation && "arena-rise-in")}
+              style={playAdvanceAnimation ? ({ "--arena-rise-delay": `${Math.min(index, 8) * 0.06}s` } as React.CSSProperties) : undefined}
+            >
               <CardContent className="flex flex-col gap-2 py-3">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] text-arena-silver/50">第{match.matchNumber}試合</span>
                   {match.involvesMe && <Badge variant="primary">あなた</Badge>}
                 </div>
-                <ParticipantRow participant={match.player1} winnerId={match.winnerParticipantId} status={match.status} />
+                <ParticipantRow
+                  participant={match.player1}
+                  winnerId={match.winnerParticipantId}
+                  status={match.status}
+                  advancedFromLabel={activeRound.round > 1 ? previousRoundLabel : undefined}
+                />
                 <div className="h-px bg-arena-border" />
-                <ParticipantRow participant={match.player2} winnerId={match.winnerParticipantId} status={match.status} />
+                <ParticipantRow
+                  participant={match.player2}
+                  winnerId={match.winnerParticipantId}
+                  status={match.status}
+                  advancedFromLabel={activeRound.round > 1 ? previousRoundLabel : undefined}
+                />
               </CardContent>
             </Card>
           ))}
@@ -209,10 +236,14 @@ function ParticipantRow({
   participant,
   winnerId,
   status,
+  advancedFromLabel,
 }: {
   participant: MatchView["player1"];
   winnerId: string | null;
   status: string;
+  /** Set to the previous round's label (e.g. "1回戦") when this row belongs to round 2+, so an
+   * existing participant here is shown as having just advanced from that round. */
+  advancedFromLabel?: string;
 }) {
   if (!participant) {
     return <p className="text-sm text-arena-silver/50">未対戦</p>;
@@ -220,9 +251,17 @@ function ParticipantRow({
   const isWinner = winnerId === participant.id;
   return (
     <div className="flex items-center justify-between">
-      <div className="flex items-center gap-1.5">
-        {participant.isBot && <Bot className="h-3.5 w-3.5 text-arena-silver/60" />}
-        <span className={cn("text-sm", isWinner ? "font-semibold text-arena-white" : "text-arena-silver")}>{participant.name}</span>
+      <div className="flex flex-col gap-0.5">
+        <div className="flex items-center gap-1.5">
+          {participant.isBot && <Bot className="h-3.5 w-3.5 text-arena-silver/60" />}
+          <span className={cn("text-sm", isWinner ? "font-semibold text-arena-white" : "text-arena-silver")}>{participant.name}</span>
+        </div>
+        {advancedFromLabel && (
+          <span className="flex items-center gap-0.5 text-[10px] text-arena-primary-soft/80">
+            <ChevronsUp className="h-2.5 w-2.5" />
+            {advancedFromLabel}を突破
+          </span>
+        )}
       </div>
       {status === "COMPLETED" && isWinner && <Crown className="h-4 w-4 text-arena-gold" />}
     </div>

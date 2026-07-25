@@ -10,9 +10,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BACKGROUND_GRADIENTS, BADGE_ICON_KEYS } from "@/config/shop-items";
 import { cn } from "@/lib/utils/cn";
-import { Coins, Check, Lock, Flame, Star, Skull, Gem, ShoppingBag } from "lucide-react";
+import { Coins, Check, Lock, Flame, Star, Skull, Gem, Crown, Zap, Shield, Eye, ShoppingBag } from "lucide-react";
 
-const BADGE_ICONS: Record<string, typeof Flame> = { Flame, Star, Skull, Gem };
+const BADGE_ICONS: Record<string, typeof Flame> = { Flame, Star, Skull, Gem, Crown, Zap, Shield, Eye };
 
 interface ShopItem {
   id: string;

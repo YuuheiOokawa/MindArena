@@ -44,6 +44,8 @@ export const minorityChoiceGame: PsychologicalGame<MinorityChoiceState, Minority
       scores: { [p1.participantId]: 0, [p2.participantId]: 0 },
       history: [],
       participantIds: [p1.participantId, p2.participantId],
+      phase: "DECLARE",
+      declarations: {},
       pendingActions: {},
       crowdByRound: {},
     };
@@ -53,6 +55,22 @@ export const minorityChoiceGame: PsychologicalGame<MinorityChoiceState, Minority
     if (state.status !== "IN_PROGRESS") return state;
     if (action.round !== state.round) throw new Error("現在のラウンドと異なる行動です。");
 
+    if (action.actionType === "DECLARE") {
+      if (state.phase !== "DECLARE") throw new Error("宣言フェーズではありません。");
+      const { pendingActions, bothSubmitted } = submitSimultaneousAction(
+        state.declarations,
+        action,
+        state.participantIds,
+      );
+      return {
+        ...state,
+        declarations: pendingActions,
+        phase: bothSubmitted ? "CHOOSE" : "DECLARE",
+      };
+    }
+
+    // CHOOSE — the final, locked-in pick. May or may not match the round's declaration.
+    if (state.phase !== "CHOOSE") throw new Error("選択フェーズではありません。");
     const { pendingActions, bothSubmitted } = submitSimultaneousAction(
       state.pendingActions,
       action,
@@ -78,12 +96,14 @@ export const minorityChoiceGame: PsychologicalGame<MinorityChoiceState, Minority
       ...state,
       round: nextRound,
       status: isFinalRound ? "COMPLETE" : "IN_PROGRESS",
+      phase: "DECLARE",
       scores: { [idA]: state.scores[idA] + scoreA, [idB]: state.scores[idB] + scoreB },
       history: [
         ...state.history,
-        { round: state.round, actions: pendingActions, outcome: { [idA]: scoreA, [idB]: scoreB } },
+        { round: state.round, actions: pendingActions, declarations: state.declarations, outcome: { [idA]: scoreA, [idB]: scoreB } },
       ],
       crowdByRound: { ...state.crowdByRound, [state.round]: crowd },
+      declarations: {},
       pendingActions: {},
     };
   },
@@ -98,7 +118,10 @@ export const minorityChoiceGame: PsychologicalGame<MinorityChoiceState, Minority
   },
 
   isRoundComplete(state) {
-    return state.participantIds.every((id) => Boolean(state.pendingActions[id]));
+    return (
+      state.participantIds.every((id) => Boolean(state.declarations[id])) &&
+      state.participantIds.every((id) => Boolean(state.pendingActions[id]))
+    );
   },
 
   resolveTiebreak(state) {

@@ -27,8 +27,12 @@ export function GameBoard({ state, myId, opponentId, submitting, onSubmit }: Gam
       return (
         <MinorityChoiceBoard
           myId={myId}
+          opponentId={opponentId}
+          phase={state.phase}
+          declarations={state.declarations}
           pendingActions={state.pendingActions}
           submitting={submitting}
+          onDeclare={(choice) => onSubmit("DECLARE", { choice })}
           onChoose={(choice) => onSubmit("CHOOSE", { choice })}
         />
       );

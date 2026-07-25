@@ -10,6 +10,7 @@ interface RoundEntry {
   round: number;
   actions: Record<string, { actionData: Record<string, unknown> }>;
   responses?: Record<string, { actionData: Record<string, unknown> }>;
+  declarations?: Record<string, { actionData: Record<string, unknown> }>;
   outcome?: Record<string, number>;
 }
 
@@ -232,6 +233,8 @@ function MinorityChoiceReveal({
 }) {
   const myChoice = entry.actions[myId]?.actionData?.choice as "A" | "B" | undefined;
   const oppChoice = entry.actions[opponentId]?.actionData?.choice as "A" | "B" | undefined;
+  const myDeclared = entry.declarations?.[myId]?.actionData?.choice as "A" | "B" | undefined;
+  const oppDeclared = entry.declarations?.[opponentId]?.actionData?.choice as "A" | "B" | undefined;
   const crowdByRound = state.crowdByRound as Record<number, { aCount: number; bCount: number }> | undefined;
   const crowd = crowdByRound?.[entry.round] ?? { aCount: 0, bCount: 0 };
 
@@ -239,6 +242,8 @@ function MinorityChoiceReveal({
   const totalB = crowd.bCount + (myChoice === "B" ? 1 : 0) + (oppChoice === "B" ? 1 : 0);
   const total = totalA + totalB || 1;
   const minoritySide = totalA === totalB ? null : totalA < totalB ? "A" : "B";
+  const oppBluffed = oppDeclared && oppChoice && oppDeclared !== oppChoice;
+  const iBluffed = myDeclared && myChoice && myDeclared !== myChoice;
 
   return (
     <div className="flex flex-col gap-3">
@@ -248,6 +253,12 @@ function MinorityChoiceReveal({
         myIcon={<span className="text-sm font-bold">{myChoice}</span>}
         oppIcon={<span className="text-sm font-bold">{oppChoice}</span>}
       />
+      {(myDeclared || oppDeclared) && (
+        <div className="flex flex-col gap-1 text-center text-[11px] text-arena-silver">
+          {myDeclared && <p>あなたは「{myDeclared}」と宣言{iBluffed ? `し、実際は「${myChoice}」を選びました（ブラフ）` : "し、その通り選びました"}。</p>}
+          {oppDeclared && <p>相手は「{oppDeclared}」と宣言{oppBluffed ? `し、実際は「${oppChoice}」を選びました（ブラフ）` : "し、その通り選びました"}。</p>}
+        </div>
+      )}
       <div>
         <p className="mb-1 flex items-center gap-1 text-[11px] text-arena-silver/70">
           <Users className="h-3 w-3" />

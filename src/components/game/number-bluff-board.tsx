@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 
 interface DeclareAction {
-  actionData: { number: number; declarationId: NumberBluffDeclarationId };
+  // The opponent's entry only ever exposes declarationId (the public bluff claim) — the real
+  // number stays server-redacted until the round resolves, so it's typed optional here.
+  actionData: { number?: number; declarationId: NumberBluffDeclarationId };
 }
 
 export function NumberBluffBoard({
@@ -92,9 +94,7 @@ export function NumberBluffBoard({
     <div className="flex flex-col gap-3">
       <div className="rounded-xl border border-arena-border bg-arena-surface-2 px-4 py-3">
         <p className="text-xs text-arena-silver">相手の宣言</p>
-        <p className="mt-1 text-base font-semibold text-arena-white">
-          {declarationText ?? "…"} （数字: {opponentDeclaration?.actionData.number ?? "?"}）
-        </p>
+        <p className="mt-1 text-base font-semibold text-arena-white">{declarationText ?? "…"}</p>
       </div>
       <div className="flex gap-3">
         <ChoiceButton label="信じる" disabled={submitting} onClick={() => onRespond(true)} />

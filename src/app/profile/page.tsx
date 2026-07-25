@@ -8,13 +8,13 @@ import { StatTile } from "@/components/common/stat-tile";
 import { EmptyState } from "@/components/common/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Coins, Flame, Gem, Settings, ShoppingBag, Skull, Sparkles, Star, Trophy, Users } from "lucide-react";
+import { BookOpen, Coins, Crown, Eye, Flame, Gem, Pencil, Settings, Shield, ShoppingBag, Skull, Sparkles, Star, Trophy, Users, Zap } from "lucide-react";
 import { TITLES } from "@/config/titles";
 import { BACKGROUND_GRADIENTS, BADGE_ICON_KEYS } from "@/config/shop-items";
 import { cn } from "@/lib/utils/cn";
 import type { LucideIcon } from "lucide-react";
 
-const BADGE_ICONS: Record<string, LucideIcon> = { Flame, Star, Skull, Gem };
+const BADGE_ICONS: Record<string, LucideIcon> = { Flame, Star, Skull, Gem, Crown, Zap, Shield, Eye };
 
 function ProfileLinkRow({ href, icon: Icon, label }: { href: string; icon: LucideIcon; label: string }) {
   return (
@@ -52,9 +52,14 @@ export default async function ProfilePage() {
       <div className="flex flex-col gap-5 px-4 pb-8 pt-6">
         <header className="flex items-center justify-between">
           <h1 className="text-lg font-bold text-arena-white">プロフィール</h1>
-          <Link href="/settings" className="flex h-9 w-9 items-center justify-center rounded-full border border-arena-border text-arena-silver">
-            <Settings className="h-4 w-4" />
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/profile/edit" className="flex h-9 w-9 items-center justify-center rounded-full border border-arena-border text-arena-silver">
+              <Pencil className="h-4 w-4" />
+            </Link>
+            <Link href="/settings" className="flex h-9 w-9 items-center justify-center rounded-full border border-arena-border text-arena-silver">
+              <Settings className="h-4 w-4" />
+            </Link>
+          </div>
         </header>
 
         <Card
