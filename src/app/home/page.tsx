@@ -14,11 +14,12 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Bell, Bot, Coins, Mail, Megaphone, Swords, Trophy } from "lucide-react";
+import { Bell, Bot, Calendar, Coins, Mail, Megaphone, Swords, Trophy } from "lucide-react";
 import { resumeHref } from "@/features/tournaments/resume-href";
 import { APP_CONFIG } from "@/config/app";
 import { PlayerAvatar } from "@/components/common/player-avatar";
 import { LeagueBadgeIcon } from "@/components/common/league-badge-icon";
+import { ANNOUNCEMENTS } from "@/config/announcements";
 
 export default async function HomePage() {
   const session = await auth();
@@ -151,7 +152,27 @@ export default async function HomePage() {
 
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold text-arena-silver">お知らせ</h2>
-          <EmptyState icon={Megaphone} title="現在お知らせはありません" />
+          {ANNOUNCEMENTS.length === 0 ? (
+            <EmptyState icon={Megaphone} title="現在お知らせはありません" />
+          ) : (
+            <div className="flex flex-col gap-2">
+              {ANNOUNCEMENTS.map((announcement) => (
+                <Card key={announcement.id} className="border-arena-gold/25 bg-gradient-to-b from-arena-gold/5 to-transparent">
+                  <CardContent className="flex flex-col gap-1.5 py-3.5">
+                    <div className="flex items-center gap-1.5">
+                      <Megaphone className="h-3.5 w-3.5 shrink-0 text-arena-gold" />
+                      <p className="text-sm font-semibold text-arena-white">{announcement.title}</p>
+                    </div>
+                    <p className="flex items-center gap-1 text-[11px] text-arena-gold/90">
+                      <Calendar className="h-3 w-3 shrink-0" />
+                      {announcement.date}
+                    </p>
+                    <p className="text-xs leading-relaxed text-arena-silver">{announcement.body}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </AppScreen>
