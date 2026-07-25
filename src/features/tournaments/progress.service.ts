@@ -4,6 +4,7 @@ import { tournamentParticipantRepository } from "@/infrastructure/repositories/t
 import { tournamentMatchRepository } from "@/infrastructure/repositories/tournament-match.repository";
 import { gameTypeRepository } from "@/infrastructure/repositories/game-type.repository";
 import { playerGameStatsRepository } from "@/infrastructure/repositories/player-game-stats.repository";
+import { gameSessionRepository } from "@/infrastructure/repositories/game-session.repository";
 import { awardPoints } from "@/features/points/award-points.service";
 import { simulateBotVsBotMatch } from "@/features/games/core/simulate-bot-match";
 import { generateBracket, isFinalRound, pairNextRound } from "@/domain/services/bracket.service";
@@ -66,6 +67,7 @@ export async function generateBracketForTournament(tournamentId: string) {
   });
 
   await resolveBotVsBotMatchesForRound(tournamentId, 1);
+  await resolveWithdrawnMatchesForRound(tournamentId, 1);
 }
 
 /** Simulates and finalizes every match in a round where both sides are BOTs. */
@@ -101,6 +103,67 @@ export async function resolveBotVsBotMatchesForRound(tournamentId: string, round
 
     await finalizeMatchResult(match.id, result, result.finalScores[match.player1.id] ?? 0, result.finalScores[match.player2.id] ?? 0);
   }
+}
+
+/**
+ * A player can withdraw (棄権) from a tournament while waiting between rounds — after they've
+ * already won their current match but before the round's other match(es) finish, so there's no
+ * live match of theirs to forfeit yet (see withdraw.service.ts). They're marked WITHDRAWN
+ * immediately, but the bracket can't route around them mid-structure without real bye-round
+ * support, so instead: the moment a real match pairing them against someone actually gets
+ * created (here, right after round generation — the same place bot-vs-bot matches auto-resolve),
+ * that match is instantly forfeited on their behalf so their opponent isn't left waiting on a
+ * no-show.
+ */
+export async function resolveWithdrawnMatchesForRound(tournamentId: string, round: number) {
+  const matches = await tournamentMatchRepository.listForRound(tournamentId, round);
+
+  for (const match of matches) {
+    if (match.status !== MatchStatus.READY) continue;
+    if (!match.player1 || !match.player2) continue;
+    const withdrawnSide =
+      match.player1.status === ParticipantStatus.WITHDRAWN
+        ? match.player1
+        : match.player2.status === ParticipantStatus.WITHDRAWN
+          ? match.player2
+          : null;
+    if (!withdrawnSide) continue;
+
+    await forfeitMatch(match.id, withdrawnSide.id);
+  }
+}
+
+/** A player choosing to forfeit their current live match (withdraw.service.ts) reuses the normal
+ * loss path — same elimination/points/bracket-advancement as losing a real round — so the rest
+ * of the bracket behaves exactly as if they'd played and lost. */
+export async function forfeitMatch(matchId: string, forfeitingParticipantId: string) {
+  const match = await tournamentMatchRepository.findById(matchId);
+  if (!match.player1 || !match.player2) return;
+  if (match.status !== MatchStatus.READY && match.status !== MatchStatus.IN_PROGRESS) return;
+
+  const winner = match.player1.id === forfeitingParticipantId ? match.player2 : match.player1;
+  const loser = winner.id === match.player1.id ? match.player2 : match.player1;
+
+  const session = await gameSessionRepository.findByMatchId(matchId);
+  if (session && session.status === "ACTIVE") {
+    await gameSessionRepository.abandon(session.id);
+  }
+
+  const gameType = await gameTypeRepository.findById(match.gameTypeId);
+  await finalizeMatchResult(
+    matchId,
+    {
+      gameId: resolveGameId(gameType.code),
+      sessionId: matchId,
+      winnerParticipantId: winner.id,
+      loserParticipantId: loser.id,
+      isDraw: false,
+      finalScores: {},
+      rounds: [],
+    },
+    0,
+    0,
+  );
 }
 
 function resolveGameId(gameTypeCode: string): string {
@@ -293,4 +356,5 @@ export async function tryAdvanceRound(tournamentId: string, completedRound: numb
   }
 
   await resolveBotVsBotMatchesForRound(tournamentId, nextRound);
+  await resolveWithdrawnMatchesForRound(tournamentId, nextRound);
 }

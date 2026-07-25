@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfettiBurst } from "@/components/common/confetti-burst";
 import { BracketTree, roundLabel, type BracketRound } from "@/components/bracket/bracket-tree";
-import { Bot, Swords, ChevronsUp } from "lucide-react";
+import { Bot, Swords, ChevronsUp, LogOut } from "lucide-react";
 
 interface MatchView {
   id: string;
@@ -32,6 +32,7 @@ interface TournamentView {
   maxPlayers: number;
   myParticipantId: string | null;
   winnerParticipantId: string | null;
+  canWithdraw: boolean;
   rounds: BracketRound[];
 }
 
@@ -71,6 +72,7 @@ export default function BracketPage({ params }: { params: Promise<{ id: string }
   const [winnerBaseline, setWinnerBaseline] = useState<Record<string, string | null> | null>(null);
   const [freshMatchIds, setFreshMatchIds] = useState<Set<string>>(new Set());
   const [retryToken, setRetryToken] = useState(0);
+  const [withdrawing, setWithdrawing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -105,6 +107,18 @@ export default function BracketPage({ params }: { params: Promise<{ id: string }
       clearTimeout(timer);
     };
   }, [id, retryToken]);
+
+  async function handleWithdraw() {
+    if (!window.confirm("この大会を棄権しますか？この操作は取り消せません。")) return;
+    setWithdrawing(true);
+    try {
+      await apiClient.post(`/api/tournaments/${id}/withdraw`);
+      router.push("/home");
+    } catch (e) {
+      setError(e instanceof ApiClientError ? e.message : "棄権に失敗しました。");
+      setWithdrawing(false);
+    }
+  }
 
   if (error) {
     return (
@@ -221,6 +235,13 @@ export default function BracketPage({ params }: { params: Promise<{ id: string }
             playEntrance={isFirstLoad}
           />
         </div>
+
+        {view.canWithdraw && (
+          <Button variant="ghost" onClick={handleWithdraw} disabled={withdrawing} className="text-arena-danger">
+            <LogOut className="h-4 w-4" />
+            {withdrawing ? "処理しています…" : "この大会を棄権する"}
+          </Button>
+        )}
       </div>
     </AppScreen>
   );

@@ -7,7 +7,7 @@ import { AppScreen } from "@/components/layout/app-screen";
 import { ErrorState } from "@/components/common/error-state";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Users } from "lucide-react";
+import { CheckCircle2, LogOut, Users } from "lucide-react";
 
 interface TournamentView {
   id: string;
@@ -15,6 +15,7 @@ interface TournamentView {
   participantCount: number;
   maxPlayers: number;
   isCreator: boolean;
+  canWithdraw: boolean;
   pendingInvites: number;
   joinedPlayers: { name: string; isMe: boolean }[];
 }
@@ -27,6 +28,7 @@ export default function MatchmakingPage({ params }: { params: Promise<{ id: stri
   const [ready, setReady] = useState(false);
   const [starting, setStarting] = useState(false);
   const [retryToken, setRetryToken] = useState(0);
+  const [withdrawing, setWithdrawing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,6 +76,21 @@ export default function MatchmakingPage({ params }: { params: Promise<{ id: stri
     } catch (e) {
       setError(e instanceof ApiClientError ? e.message : "開始に失敗しました。");
       setStarting(false);
+    }
+  }
+
+  async function handleWithdraw() {
+    const confirmMessage = view?.isCreator
+      ? "この大会を取りやめますか？招待した全員が参加できなくなります。"
+      : "この大会から抜けますか？";
+    if (!window.confirm(confirmMessage)) return;
+    setWithdrawing(true);
+    try {
+      await apiClient.post(`/api/tournaments/${id}/withdraw`);
+      router.push("/home");
+    } catch (e) {
+      setError(e instanceof ApiClientError ? e.message : "棄権に失敗しました。");
+      setWithdrawing(false);
     }
   }
 
@@ -131,6 +148,13 @@ export default function MatchmakingPage({ params }: { params: Promise<{ id: stri
         {view?.isCreator && !ready && (
           <Button variant="secondary" onClick={handleStartNow} disabled={starting} className="w-full max-w-xs">
             {starting ? "開始しています…" : "今すぐ開始する"}
+          </Button>
+        )}
+
+        {view?.canWithdraw && !ready && (
+          <Button variant="ghost" onClick={handleWithdraw} disabled={withdrawing} className="w-full max-w-xs text-arena-danger">
+            <LogOut className="h-4 w-4" />
+            {withdrawing ? "処理しています…" : view.isCreator ? "大会を取りやめる" : "大会から抜ける"}
           </Button>
         )}
       </div>

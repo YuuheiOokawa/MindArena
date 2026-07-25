@@ -24,6 +24,10 @@ export async function getTournamentView(userId: string, tournamentId: string) {
 
   const myParticipant = tournament.participants.find((p) => p.playerId === profile.id);
   const isCreator = tournament.participants.find((p) => p.seed === 1)?.playerId === profile.id;
+  const canWithdraw =
+    Boolean(myParticipant) &&
+    myParticipant!.status === "ACTIVE" &&
+    (tournament.status === TournamentStatus.RECRUITING || tournament.status === TournamentStatus.IN_PROGRESS);
   const pendingInvites =
     tournament.status === TournamentStatus.RECRUITING
       ? await tournamentInviteRepository.countPendingForTournament(tournamentId)
@@ -49,6 +53,7 @@ export async function getTournamentView(userId: string, tournamentId: string) {
     myParticipantId: myParticipant?.id ?? null,
     winnerParticipantId: tournament.winnerParticipantId,
     isCreator,
+    canWithdraw,
     pendingInvites,
     joinedPlayers: tournament.participants
       .filter((p) => p.type === "HUMAN")

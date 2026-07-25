@@ -23,4 +23,13 @@ export const gameSessionRepository = {
       data: { state, status: GameSessionStatus.COMPLETED, completedAt: new Date() },
     });
   },
+
+  /** A match resolved by forfeit/withdrawal rather than being genuinely played out — distinct
+   * from `complete` so it's not confused with a real finish in any future stats/history view. */
+  async abandon(id: string) {
+    return prisma.gameSession.update({
+      where: { id },
+      data: { status: GameSessionStatus.ABANDONED, completedAt: new Date() },
+    });
+  },
 };

@@ -62,4 +62,21 @@ export const tournamentParticipantRepository = {
   async markChampion(id: string) {
     return prisma.tournamentParticipant.update({ where: { id }, data: { finalPlacement: 1 } });
   },
+
+  /** A player voluntarily leaving a tournament they're still ACTIVE in. Distinct from
+   * `markEliminated` (a real loss) — see withdraw.service.ts. */
+  async markWithdrawn(id: string) {
+    return prisma.tournamentParticipant.update({ where: { id }, data: { status: ParticipantStatus.WITHDRAWN } });
+  },
+
+  /** Safe only before any match references this row (RECRUITING — no bracket generated yet). */
+  async delete(id: string) {
+    await prisma.tournamentParticipant.delete({ where: { id } });
+  },
+
+  /** Safe only before any match exists for the tournament (RECRUITING) — used when its creator
+   * cancels the whole lobby. */
+  async deleteAllForTournament(tournamentId: string) {
+    await prisma.tournamentParticipant.deleteMany({ where: { tournamentId } });
+  },
 };
