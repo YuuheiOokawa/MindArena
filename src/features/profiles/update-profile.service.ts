@@ -1,6 +1,7 @@
 import { playerProfileRepository } from "@/infrastructure/repositories/player-profile.repository";
 import { isTitleUnlocked } from "@/domain/services/title-unlock.service";
 import { computeTitleUnlockStats } from "./title-unlock-stats";
+import { getPurchasedTitleIds } from "./purchased-titles";
 import { TITLES } from "@/config/titles";
 import { AppError } from "@/lib/errors/app-error";
 import type { UpdateCosmeticsInput, UpdateDisplayNameInput, UpdateSettingsInput } from "@/lib/validation/profile.schema";
@@ -24,7 +25,10 @@ export async function updateMyCosmetics(userId: string, input: UpdateCosmeticsIn
     if (!title) throw new AppError("VALIDATION_ERROR", "無効な称号です。");
     const stats = await computeTitleUnlockStats(profile);
     if (!isTitleUnlocked(title.id, stats)) {
-      throw new AppError("VALIDATION_ERROR", "その称号はまだ獲得していません。");
+      const purchasedTitleIds = await getPurchasedTitleIds(profile.id);
+      if (!purchasedTitleIds.has(title.id)) {
+        throw new AppError("VALIDATION_ERROR", "その称号はまだ獲得していません。");
+      }
     }
   }
 

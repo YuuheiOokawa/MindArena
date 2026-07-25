@@ -159,6 +159,42 @@ export const SHOP_ITEMS: ShopItemConfig[] = [
     description: "相手の心を見抜く洞察力を示すバッジ。",
     assetKey: "eye",
   },
+  {
+    id: "bg-glacier",
+    code: "BG_GLACIER",
+    name: "氷河背景",
+    category: "BACKGROUND",
+    price: 400,
+    description: "凍てつく静寂を纏う氷河の背景。",
+    assetKey: "glacier",
+  },
+  {
+    id: "bg-inferno",
+    code: "BG_INFERNO",
+    name: "業火背景",
+    category: "BACKGROUND",
+    price: 700,
+    description: "すべてを焼き尽くす業火の背景。",
+    assetKey: "inferno",
+  },
+  {
+    id: "badge-target",
+    code: "BADGE_TARGET",
+    name: "百発百中の証",
+    category: "BADGE",
+    price: 350,
+    description: "狙いを外さぬ精密さを示すバッジ。",
+    assetKey: "target",
+  },
+  {
+    id: "badge-compass",
+    code: "BADGE_COMPASS",
+    name: "羅針盤の証",
+    category: "BADGE",
+    price: 450,
+    description: "迷いなき判断力を示すバッジ。",
+    assetKey: "compass",
+  },
 ];
 
 export function getShopItem(id: string): ShopItemConfig | undefined {
@@ -174,6 +210,8 @@ export const BACKGROUND_GRADIENTS: Record<string, string> = {
   tempest: "from-arena-silver/25 via-arena-primary-dark/20 to-transparent",
   eclipse: "from-arena-bg via-arena-gold/15 to-transparent",
   nova: "from-arena-gold/35 via-arena-danger/20 to-transparent",
+  glacier: "from-arena-primary-soft/20 via-arena-bg to-transparent",
+  inferno: "from-arena-danger/35 via-arena-gold/20 to-transparent",
 };
 
 export const BADGE_ICON_KEYS: Record<string, string> = {
@@ -185,4 +223,6 @@ export const BADGE_ICON_KEYS: Record<string, string> = {
   zap: "Zap",
   shield: "Shield",
   eye: "Eye",
+  target: "Target",
+  compass: "Compass",
 };

@@ -10,15 +10,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BACKGROUND_GRADIENTS, BADGE_ICON_KEYS } from "@/config/shop-items";
 import { cn } from "@/lib/utils/cn";
-import { Coins, Check, Lock, Flame, Star, Skull, Gem, Crown, Zap, Shield, Eye, ShoppingBag } from "lucide-react";
+import { Coins, Check, Lock, Flame, Star, Skull, Gem, Crown, Zap, Shield, Eye, Target, Compass, ShoppingBag, Trophy } from "lucide-react";
 
-const BADGE_ICONS: Record<string, typeof Flame> = { Flame, Star, Skull, Gem, Crown, Zap, Shield, Eye };
+const BADGE_ICONS: Record<string, typeof Flame> = { Flame, Star, Skull, Gem, Crown, Zap, Shield, Eye, Target, Compass };
 
 interface ShopItem {
   id: string;
   code: string;
   name: string;
-  category: "BACKGROUND" | "BADGE";
+  category: "BACKGROUND" | "BADGE" | "TITLE";
   price: number;
   assetKey: string;
   owned: boolean;
@@ -26,6 +26,7 @@ interface ShopItem {
 
 interface ShopCatalog {
   prizeCurrency: number;
+  lifetimePrizeCurrency: number;
   items: ShopItem[];
   selectedBackgroundId: string | null;
   selectedBadgeId: string | null;
@@ -86,6 +87,7 @@ export default function ShopPage() {
 
   const backgrounds = catalog.items.filter((i) => i.category === "BACKGROUND");
   const badges = catalog.items.filter((i) => i.category === "BADGE");
+  const titles = catalog.items.filter((i) => i.category === "TITLE");
 
   return (
     <AppScreen nav header={<FocusHeader title="ショップ" backHref="/profile" />}>
@@ -101,10 +103,16 @@ export default function ShopPage() {
                 <p className="text-xl font-bold tabular-nums text-arena-gold">{catalog.prizeCurrency.toLocaleString()}</p>
               </div>
             </div>
-            <p className="flex items-center gap-1 text-[11px] text-arena-silver/60">
-              <ShoppingBag className="h-3.5 w-3.5" />
-              優勝すると賞金を獲得
-            </p>
+            <div className="text-right">
+              <p className="flex items-center justify-end gap-1 text-[10px] text-arena-silver/50">
+                <Trophy className="h-3 w-3" />
+                生涯獲得 {catalog.lifetimePrizeCurrency.toLocaleString()}
+              </p>
+              <p className="flex items-center justify-end gap-1 text-[11px] text-arena-silver/60">
+                <ShoppingBag className="h-3.5 w-3.5" />
+                優勝すると賞金を獲得
+              </p>
+            </div>
           </CardContent>
         </Card>
 
@@ -143,8 +151,73 @@ export default function ShopPage() {
             ))}
           </div>
         </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="text-sm font-semibold text-arena-silver">称号</h2>
+          <div className="flex flex-col gap-2">
+            {titles.map((item) => (
+              <TitleCard
+                key={item.id}
+                item={item}
+                busy={busyId === item.id}
+                canAfford={catalog.prizeCurrency >= item.price}
+                onPurchase={() => handlePurchase(item.id)}
+              />
+            ))}
+          </div>
+          <Card>
+            <CardContent className="py-3">
+              <p className="text-[11px] text-arena-silver/70">購入した称号は「プロフィール編集」から装備できます。</p>
+            </CardContent>
+          </Card>
+        </section>
       </div>
     </AppScreen>
+  );
+}
+
+function TitleCard({
+  item,
+  busy,
+  canAfford,
+  onPurchase,
+}: {
+  item: ShopItem;
+  busy: boolean;
+  canAfford: boolean;
+  onPurchase: () => void;
+}) {
+  return (
+    <Card className={item.owned ? "border-arena-primary/40" : ""}>
+      <CardContent className="flex items-center justify-between gap-3 py-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-arena-gold/40 bg-arena-gold/10">
+            <Crown className="h-4 w-4 text-arena-gold" />
+          </div>
+          <p className="truncate text-xs font-semibold text-arena-white">{item.name}</p>
+        </div>
+        {item.owned ? (
+          <span className="flex shrink-0 items-center gap-1 text-[11px] text-arena-success">
+            <Check className="h-3.5 w-3.5" />
+            所持中
+          </span>
+        ) : (
+          <Button variant="secondary" size="sm" onClick={onPurchase} disabled={busy || !canAfford} className="shrink-0">
+            {!canAfford ? (
+              <>
+                <Lock className="h-3 w-3" />
+                不足
+              </>
+            ) : (
+              <>
+                <Coins className="h-3 w-3 text-arena-gold" />
+                {item.price}
+              </>
+            )}
+          </Button>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

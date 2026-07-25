@@ -7,6 +7,7 @@ import { resolveFrameTier, resolveNextFrameTier } from "@/domain/services/profil
 import { getUnlockedTitleIds } from "@/domain/services/title-unlock.service";
 import { calculateWinRate } from "@/domain/services/win-rate.util";
 import { computeTitleUnlockStats } from "./title-unlock-stats";
+import { getPurchasedTitleIds } from "./purchased-titles";
 import { FRAME_TIERS } from "@/config/frames";
 import { TITLES } from "@/config/titles";
 import { AppError } from "@/lib/errors/app-error";
@@ -16,13 +17,14 @@ export async function getMyProfile(userId: string) {
   if (!profile) throw new AppError("NOT_FOUND", "プロフィールが見つかりません。");
 
   const equippedIds = [profile.selectedBackgroundId, profile.selectedBadgeId].filter((id): id is string => Boolean(id));
-  const [leagues, trophies, equippedItems, titleStats] = await Promise.all([
+  const [leagues, trophies, equippedItems, titleStats, purchasedTitleIds] = await Promise.all([
     leagueRepository.findAllActive(),
     leagueTrophyRepository.listForPlayer(profile.id),
     equippedIds.length > 0 ? cosmeticItemRepository.findManyByIds(equippedIds) : Promise.resolve([]),
     computeTitleUnlockStats(profile),
+    getPurchasedTitleIds(profile.id),
   ]);
-  const unlockedTitleIds = getUnlockedTitleIds(TITLES.map((t) => t.id), titleStats);
+  const unlockedTitleIds = Array.from(new Set([...getUnlockedTitleIds(TITLES.map((t) => t.id), titleStats), ...purchasedTitleIds]));
 
   const progress = getLeagueProgress(profile.totalPoints, leagues);
   const frame = resolveFrameTier(profile.totalPoints, FRAME_TIERS);
@@ -36,6 +38,7 @@ export async function getMyProfile(userId: string) {
     displayName: profile.displayName,
     totalPoints: profile.totalPoints,
     prizeCurrency: profile.prizeCurrency,
+    lifetimePrizeCurrency: profile.lifetimePrizeCurrency,
     totalMatches: profile.totalMatches,
     totalWins: profile.totalWins,
     totalLosses: profile.totalLosses,

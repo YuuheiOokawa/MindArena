@@ -121,6 +121,8 @@ model PlayerProfile {
   displayName          String
   totalPoints          Int      @default(0)
   prizeCurrency        Int      @default(0)
+  /** Cumulative prizeCurrency ever earned (never decremented by shop purchases) — "生涯獲得賞金". */
+  lifetimePrizeCurrency Int     @default(0)
   currentLeagueId      String
   currentLeague        League   @relation(fields: [currentLeagueId], references: [id])
   totalMatches         Int      @default(0)

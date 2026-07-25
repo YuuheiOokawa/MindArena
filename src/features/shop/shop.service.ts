@@ -33,6 +33,7 @@ export async function getShopCatalog(userId: string) {
 
   return {
     prizeCurrency: profile.prizeCurrency,
+    lifetimePrizeCurrency: profile.lifetimePrizeCurrency,
     items: shopItems,
     selectedBackgroundId: profile.selectedBackgroundId,
     selectedBadgeId: profile.selectedBadgeId,

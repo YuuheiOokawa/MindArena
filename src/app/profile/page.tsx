@@ -11,14 +11,14 @@ import { PlayerAvatar } from "@/components/common/player-avatar";
 import { WinRateTrendChart } from "@/components/common/win-rate-trend-chart";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Coins, Crown, Eye, Flame, Gem, Pencil, Settings, Shield, ShoppingBag, Skull, Sparkles, Star, Trophy, Users, Zap } from "lucide-react";
+import { BookOpen, Coins, Compass, Crown, Eye, Flame, Gem, Pencil, Settings, Shield, ShoppingBag, Skull, Sparkles, Star, Target, Trophy, Users, Zap } from "lucide-react";
 import { TITLES } from "@/config/titles";
 import { BACKGROUND_GRADIENTS, BADGE_ICON_KEYS } from "@/config/shop-items";
 import { LeagueBadgeIcon } from "@/components/common/league-badge-icon";
 import { cn } from "@/lib/utils/cn";
 import type { LucideIcon } from "lucide-react";
 
-const BADGE_ICONS: Record<string, LucideIcon> = { Flame, Star, Skull, Gem, Crown, Zap, Shield, Eye };
+const BADGE_ICONS: Record<string, LucideIcon> = { Flame, Star, Skull, Gem, Crown, Zap, Shield, Eye, Target, Compass };
 
 function ProfileLinkRow({ href, icon: Icon, label }: { href: string; icon: LucideIcon; label: string }) {
   return (
@@ -112,6 +112,7 @@ export default async function ProfilePage() {
                   {profile.prizeCurrency.toLocaleString()}
                 </p>
                 <p className="text-[10px] text-arena-silver/60">賞金</p>
+                <p className="text-[9px] text-arena-silver/40">生涯 {profile.lifetimePrizeCurrency.toLocaleString()}</p>
               </div>
             </div>
           </CardContent>

@@ -175,8 +175,8 @@ async function seedCosmetics() {
   for (const title of TITLES) {
     await prisma.cosmeticItem.upsert({
       where: { code: title.code },
-      update: { name: title.name, requiredPoints: 0, assetKey: title.id, effectConfig: { unlockHint: title.unlockHint }, category: "TITLE", isActive: true },
-      create: { code: title.code, name: title.name, category: "TITLE", requiredPoints: 0, assetKey: title.id, effectConfig: { unlockHint: title.unlockHint } },
+      update: { name: title.name, requiredPoints: 0, price: title.price ?? null, assetKey: title.id, effectConfig: { unlockHint: title.unlockHint }, category: "TITLE", isActive: true },
+      create: { code: title.code, name: title.name, category: "TITLE", requiredPoints: 0, price: title.price ?? null, assetKey: title.id, effectConfig: { unlockHint: title.unlockHint } },
     });
   }
 

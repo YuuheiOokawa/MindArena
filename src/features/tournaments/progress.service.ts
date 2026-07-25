@@ -282,7 +282,7 @@ async function awardChampionPrize(tx: Tx, playerProfileId: string, rewardMultipl
   const amount = Math.round(BASE_CHAMPION_PRIZE * rewardMultiplier);
   await tx.playerProfile.update({
     where: { id: playerProfileId },
-    data: { prizeCurrency: { increment: amount } },
+    data: { prizeCurrency: { increment: amount }, lifetimePrizeCurrency: { increment: amount } },
   });
 }
 
