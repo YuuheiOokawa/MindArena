@@ -18,9 +18,12 @@ export async function awardPoints(
     league: { rewardMultiplier: number };
     tournamentId?: string;
     leagueId?: string;
+    /** Bypasses the league-multiplier calculation for flat, non-scaling grants (e.g. an
+     * achievement's fixed reward — see config/achievements.ts). */
+    overrideAmount?: number;
   },
 ) {
-  const amount = calculateReward(params.reason, params.league);
+  const amount = params.overrideAmount ?? calculateReward(params.reason, params.league);
   const ledger = applyTransaction(params.currentPoints, amount);
 
   await tx.playerProfile.update({ where: { id: params.playerProfileId }, data: { totalPoints: ledger.balanceAfter } });

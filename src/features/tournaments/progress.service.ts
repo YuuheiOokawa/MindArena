@@ -5,14 +5,17 @@ import { tournamentMatchRepository } from "@/infrastructure/repositories/tournam
 import { gameTypeRepository } from "@/infrastructure/repositories/game-type.repository";
 import { playerGameStatsRepository } from "@/infrastructure/repositories/player-game-stats.repository";
 import { gameSessionRepository } from "@/infrastructure/repositories/game-session.repository";
+import { achievementRepository } from "@/infrastructure/repositories/achievement.repository";
 import { awardPoints } from "@/features/points/award-points.service";
 import { simulateBotVsBotMatch } from "@/features/games/core/simulate-bot-match";
 import { generateBracket, isFinalRound, pairNextRound } from "@/domain/services/bracket.service";
+import { findNewlyMetAchievements } from "@/domain/services/achievement-check.service";
 import { hashStringToSeed } from "@/lib/utils/seeded-random";
 import { MatchStatus, ParticipantStatus, ParticipantType, PointReason, TournamentStatus } from "@/domain/enums";
 import { ROUND_CLEAR_REASON } from "@/config/round-rewards";
 import { DEFAULT_GAME_TIMERS } from "@/config/timers";
 import { BASE_CHAMPION_PRIZE } from "@/config/points";
+import { ACHIEVEMENTS } from "@/config/achievements";
 import type { BotPlayer, GameContext, GameResult } from "@/domain/interfaces/psychological-game";
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 
@@ -228,12 +231,16 @@ export async function finalizeMatchResult(
         await awardChampionPrize(tx, winner.playerId, league.rewardMultiplier);
         await awardLeagueTrophy(tx, winner.playerId, league.id);
       }
+      await checkAndUnlockAchievements(tx, winner.playerId, league);
     }
 
-    if (isFinal && loser.type === ParticipantType.HUMAN && loser.playerId) {
-      await rewardAndUpdateStats(tx, loser.playerId, PointReason.RUNNER_UP, match.tournament.id, league, false, match.gameTypeId, false);
-    } else if (loser.type === ParticipantType.HUMAN && loser.playerId) {
-      await updateStatsOnly(tx, loser.playerId, false, match.gameTypeId);
+    if (loser.type === ParticipantType.HUMAN && loser.playerId) {
+      if (isFinal) {
+        await rewardAndUpdateStats(tx, loser.playerId, PointReason.RUNNER_UP, match.tournament.id, league, false, match.gameTypeId, false);
+      } else {
+        await updateStatsOnly(tx, loser.playerId, false, match.gameTypeId);
+      }
+      await checkAndUnlockAchievements(tx, loser.playerId, league);
     }
 
     if (isFinal) {
@@ -312,6 +319,55 @@ async function updateStatsOnly(tx: Tx, playerProfileId: string, won: boolean, ga
   });
 
   await playerGameStatsRepository.recordMatch(tx, playerProfileId, gameTypeId, won);
+}
+
+/**
+ * Runs right after a HUMAN participant's stats update inside finalizeMatchResult's transaction —
+ * every stat an achievement can depend on (totalMatches/totalWins/bestWinStreak/tournamentWins/
+ * distinctGamesPlayed via the sibling updateStatsOnly call, totalPoints via the sibling
+ * rewardAndUpdateStats call) is already fresh by this point. `tournamentEntries` and
+ * `finalsReached` are updated elsewhere (tournament join / round advancement respectively) but
+ * always *before* a match involving the new value can be finalized, so reading the profile row
+ * fresh here still catches them correctly — at most one match's delay behind the instant they
+ * were actually crossed, which is imperceptible.
+ */
+async function checkAndUnlockAchievements(tx: Tx, playerProfileId: string, league: { rewardMultiplier: number }) {
+  const [profile, distinctGamesPlayed, allAchievements, unlockedCodes] = await Promise.all([
+    tx.playerProfile.findUniqueOrThrow({ where: { id: playerProfileId } }),
+    playerGameStatsRepository.countDistinctGamesPlayed(playerProfileId, tx),
+    achievementRepository.findAllActive(),
+    achievementRepository.unlockedCodes(playerProfileId),
+  ]);
+
+  const newlyMet = findNewlyMetAchievements(ACHIEVEMENTS, unlockedCodes, {
+    totalMatches: profile.totalMatches,
+    totalWins: profile.totalWins,
+    bestWinStreak: profile.bestWinStreak,
+    finalsReached: profile.finalsReached,
+    tournamentWins: profile.tournamentWins,
+    tournamentEntries: profile.tournamentEntries,
+    totalPoints: profile.totalPoints,
+    distinctGamesPlayed,
+  });
+  if (newlyMet.length === 0) return;
+
+  const rowByCode = new Map(allAchievements.map((a) => [a.code, a]));
+  for (const achievement of newlyMet) {
+    const row = rowByCode.get(achievement.code);
+    if (!row) continue;
+
+    const isNewUnlock = await achievementRepository.unlock(tx, playerProfileId, row.id);
+    if (!isNewUnlock || achievement.rewardPoints <= 0) continue;
+
+    const current = await tx.playerProfile.findUniqueOrThrow({ where: { id: playerProfileId } });
+    await awardPoints(tx, {
+      playerProfileId,
+      currentPoints: current.totalPoints,
+      reason: PointReason.ACHIEVEMENT_BONUS,
+      league,
+      overrideAmount: achievement.rewardPoints,
+    });
+  }
 }
 
 /** Once every match in a round is complete, pairs winners into the next round and auto-resolves any all-BOT matches there. */

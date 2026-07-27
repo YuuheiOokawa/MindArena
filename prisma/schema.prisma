@@ -547,6 +547,10 @@ model PlayerAchievement {
   achievementId   String
   achievement     Achievement   @relation(fields: [achievementId], references: [id])
   unlockedAt      DateTime      @default(now())
+  /** Null until the client has shown the unlock celebration for it once (see
+   * features/achievements/notify.service.ts) — decoupled from which match triggered the
+   * unlock so it still surfaces even if the player closes the app before seeing it. */
+  notifiedAt      DateTime?
 
   @@unique([playerProfileId, achievementId])
   @@map("player_achievements")

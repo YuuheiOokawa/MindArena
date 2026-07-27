@@ -16,11 +16,16 @@ export const achievementRepository = {
     return new Set(rows.map((r) => r.achievement.code));
   },
 
-  async unlock(tx: Tx, playerProfileId: string, achievementId: string) {
-    return tx.playerAchievement.upsert({
-      where: { playerProfileId_achievementId: { playerProfileId, achievementId } },
-      create: { playerProfileId, achievementId },
-      update: {},
+  /** Race-safe against two concurrent match-finalizes for the same player both deciding this
+   * achievement isn't unlocked yet: `skipDuplicates` resolves via ON CONFLICT DO NOTHING (never
+   * throws, doesn't poison the surrounding transaction like a caught unique-violation would), and
+   * `count` tells the caller whether this call was the one that actually created it — the signal
+   * for whether to award the achievement's bonus points exactly once. */
+  async unlock(tx: Tx, playerProfileId: string, achievementId: string): Promise<boolean> {
+    const result = await tx.playerAchievement.createMany({
+      data: [{ playerProfileId, achievementId }],
+      skipDuplicates: true,
     });
+    return result.count === 1;
   },
 };

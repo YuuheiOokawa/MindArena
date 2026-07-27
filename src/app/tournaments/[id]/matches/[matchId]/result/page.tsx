@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiClient, ApiClientError } from "@/lib/api-client";
 import { AppScreen } from "@/components/layout/app-screen";
@@ -12,7 +12,7 @@ import { ConfettiBurst } from "@/components/common/confetti-burst";
 import { AnimatedNumber } from "@/components/common/animated-number";
 import { resumeHref } from "@/features/tournaments/resume-href";
 import type { ResumeScreen } from "@/features/tournaments/resume";
-import { Coins, Trophy, XCircle } from "lucide-react";
+import { Award, Coins, Trophy, XCircle } from "lucide-react";
 
 interface MatchResultView {
   won: boolean;
@@ -21,6 +21,13 @@ interface MatchResultView {
   opponentName: string;
   tournamentId: string;
   pointsEarned: number;
+}
+
+interface AchievementNotice {
+  code: string;
+  name: string;
+  description: string;
+  rewardPoints: number;
 }
 
 export default function MatchResultPage({ params }: { params: Promise<{ id: string; matchId: string }> }) {
@@ -35,12 +42,30 @@ function MatchResultSession({ id, matchId }: { id: string; matchId: string }) {
   const [result, setResult] = useState<MatchResultView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [navigating, setNavigating] = useState(false);
+  const [unlockedAchievements, setUnlockedAchievements] = useState<AchievementNotice[]>([]);
+  // consumeUnseenAchievements marks what it returns as notified server-side, so a second call
+  // legitimately returns []. Without this guard, React Strict Mode's dev-only double-invoke of
+  // effects would race two calls and the second (empty) response can clobber the first (real)
+  // one — this ref makes the second invocation on the same mount a no-op instead.
+  const achievementsFetchStartedRef = useRef(false);
 
   useEffect(() => {
     apiClient
       .get<MatchResultView>(`/api/matches/${matchId}/result`)
       .then(setResult)
       .catch((e) => setError(e instanceof ApiClientError ? e.message : "結果の取得に失敗しました。"));
+  }, [matchId]);
+
+  useEffect(() => {
+    // Independent of the result fetch above and never surfaces its own error — an achievement
+    // celebration is a bonus on top of the core win/lose result, not something that should be
+    // able to block it.
+    if (achievementsFetchStartedRef.current) return;
+    achievementsFetchStartedRef.current = true;
+    apiClient
+      .post<AchievementNotice[]>("/api/profile/me/achievements/unseen")
+      .then(setUnlockedAchievements)
+      .catch(() => undefined);
   }, [matchId]);
 
   async function handleNext() {
@@ -110,6 +135,31 @@ function MatchResultSession({ id, matchId }: { id: string; matchId: string }) {
             )}
           </CardContent>
         </Card>
+
+        {unlockedAchievements.length > 0 && (
+          <div className="flex w-full flex-col gap-2 arena-pop-in" style={{ animationDelay: "0.35s" }}>
+            {unlockedAchievements.map((achievement) => (
+              <Card key={achievement.code} className="border-arena-gold/40 bg-gradient-to-r from-arena-gold/10 to-transparent">
+                <CardContent className="flex items-center gap-3 py-3">
+                  <div
+                    className="arena-glow-pulse flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-arena-gold/50 bg-arena-gold/15"
+                    style={{ "--arena-glow-color": "rgba(224, 178, 86, 0.5)" } as React.CSSProperties}
+                  >
+                    <Award className="h-5 w-5 text-arena-gold" />
+                  </div>
+                  <div className="min-w-0 flex-1 text-left">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-arena-gold">実績解放！</p>
+                    <p className="truncate text-sm font-bold text-arena-white">{achievement.name}</p>
+                    <p className="truncate text-[11px] text-arena-silver/70">{achievement.description}</p>
+                  </div>
+                  {achievement.rewardPoints > 0 && (
+                    <span className="shrink-0 text-sm font-bold tabular-nums text-arena-gold">+{achievement.rewardPoints}P</span>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         <div className="flex w-full flex-col gap-2">
           <Button variant="gold" onClick={handleNext} disabled={navigating}>

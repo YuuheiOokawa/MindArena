@@ -4,8 +4,11 @@ import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 type Tx = Prisma.TransactionClient | PrismaClient;
 
 export const playerGameStatsRepository = {
-  async countDistinctGamesPlayed(playerProfileId: string) {
-    return prisma.playerGameStats.count({ where: { playerProfileId, matches: { gt: 0 } } });
+  // `tx` defaults to the module client so existing out-of-transaction callers are unaffected;
+  // pass the active transaction when checking this in the same tx that just called recordMatch,
+  // otherwise a fresh game-type row's count can be read before that write is visible.
+  async countDistinctGamesPlayed(playerProfileId: string, tx: Tx = prisma) {
+    return tx.playerGameStats.count({ where: { playerProfileId, matches: { gt: 0 } } });
   },
 
   async recordMatch(tx: Tx, playerProfileId: string, gameTypeId: string, won: boolean) {
