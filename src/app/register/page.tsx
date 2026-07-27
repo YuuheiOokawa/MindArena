@@ -61,7 +61,16 @@ export default function RegisterPage() {
 
         <label className="mt-1 flex items-start gap-2 text-xs text-arena-silver">
           <input type="checkbox" className="mt-0.5 h-4 w-4 accent-arena-primary" {...register("agreedToTerms")} />
-          利用規約およびプライバシーポリシーに同意します。
+          <span>
+            <Link href="/legal/terms" target="_blank" className="text-arena-primary-soft underline">
+              利用規約
+            </Link>
+            および
+            <Link href="/legal/privacy" target="_blank" className="text-arena-primary-soft underline">
+              プライバシーポリシー
+            </Link>
+            に同意します。
+          </span>
         </label>
         {errors.agreedToTerms && <p className="-mt-2 text-xs text-arena-danger">{errors.agreedToTerms.message}</p>}
 

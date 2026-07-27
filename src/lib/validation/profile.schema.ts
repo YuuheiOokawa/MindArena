@@ -30,3 +30,9 @@ export const updateCosmeticsSchema = z.object({
 });
 
 export type UpdateCosmeticsInput = z.infer<typeof updateCosmeticsSchema>;
+
+export const deactivateAccountSchema = z.object({
+  password: z.string().min(1, "パスワードを入力してください。"),
+});
+
+export type DeactivateAccountInput = z.infer<typeof deactivateAccountSchema>;

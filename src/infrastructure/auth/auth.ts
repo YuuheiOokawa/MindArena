@@ -24,7 +24,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!parsed.success) return null;
 
         const user = await userRepository.findByUsernameOrEmail(parsed.data.identifier);
-        if (!user) return null;
+        if (!user || user.deletedAt) return null;
 
         const valid = await verifyPassword(parsed.data.password, user.passwordHash);
         if (!valid) return null;

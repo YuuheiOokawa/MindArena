@@ -108,10 +108,29 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   lastLoginAt   DateTime?
+  /** Set on 退会 (account deletion) instead of a hard row delete — username/email/passwordHash
+   * are scrubbed at the same time (see features/auth/deactivate-account.service.ts) so the
+   * original identifiers free up for re-registration, while this row and its PlayerProfile stay
+   * in place for other players' match/friend history referential integrity. authorize() in
+   * auth.ts rejects login once this is set. */
+  deletedAt     DateTime?
 
   profile PlayerProfile?
 
   @@map("users")
+}
+
+/** お問い合わせ (contact/support inquiries) — no outbound email is configured for this project,
+ * so submissions are simply persisted here for manual review rather than emailed. */
+model Inquiry {
+  id        String   @id @default(cuid())
+  userId    String?
+  category  String
+  email     String
+  message   String
+  createdAt DateTime @default(now())
+
+  @@map("inquiries")
 }
 
 model PlayerProfile {

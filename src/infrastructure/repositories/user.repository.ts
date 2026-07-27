@@ -33,4 +33,24 @@ export const userRepository = {
   async touchLastLogin(id: string) {
     await prisma.user.update({ where: { id }, data: { lastLoginAt: new Date() } });
   },
+
+  /** Raw row (includes passwordHash) for the account-deletion flow's re-authentication check —
+   * findById() above returns the PII-light UserEntity used everywhere else. */
+  async findByIdWithPasswordHash(id: string) {
+    return prisma.user.findUnique({ where: { id } });
+  },
+
+  /** 退会 (account deletion): see the `deletedAt` doc comment on the User model — this scrubs
+   * the unique identifiers and password instead of deleting the row. */
+  async deactivate(id: string) {
+    return prisma.user.update({
+      where: { id },
+      data: {
+        deletedAt: new Date(),
+        username: `deleted_${id}`,
+        email: `deleted-${id}@deleted.mindarena.local`,
+        passwordHash: "",
+      },
+    });
+  },
 };
