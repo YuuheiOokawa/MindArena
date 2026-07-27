@@ -200,6 +200,20 @@ body {
   pointer-events: none;
 }
 
+/* Same overrides as the OS-level media query below, applied instead when the player has turned
+   on "演出軽減" in-app (PlayerProfile.reducedMotion) — the OS preference isn't always available
+   or wanted independently of this app's own setting (see PreferencesProvider, which toggles this
+   class on <body>). */
+body.arena-reduced-motion .arena-pop-in,
+body.arena-reduced-motion .arena-glow-pulse,
+body.arena-reduced-motion .arena-shake-once,
+body.arena-reduced-motion .arena-rise-in,
+body.arena-reduced-motion .arena-confetti-piece,
+body.arena-reduced-motion .arena-shimmer::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .arena-pop-in,
   .arena-glow-pulse,

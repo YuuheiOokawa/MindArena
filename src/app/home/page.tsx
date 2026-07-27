@@ -142,7 +142,7 @@ export default async function HomePage() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-arena-white">{match.gameName}</p>
                       <p className="flex items-center gap-1 truncate text-xs text-arena-silver">
-                        {match.opponentIsBot && <Bot className="h-3 w-3 shrink-0" />}
+                        {profile.showBotTag && match.opponentIsBot && <Bot className="h-3 w-3 shrink-0" />}
                         vs {match.opponentName}
                       </p>
                     </div>

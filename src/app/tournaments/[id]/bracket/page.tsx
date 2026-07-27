@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfettiBurst } from "@/components/common/confetti-burst";
 import { BracketTree, roundLabel, type BracketRound } from "@/components/bracket/bracket-tree";
+import { usePreferences } from "@/components/providers/preferences-provider";
 import { Bot, Swords, ChevronsUp, LogOut } from "lucide-react";
 
 interface MatchView {
@@ -36,7 +37,7 @@ interface TournamentView {
   rounds: BracketRound[];
 }
 
-function Avatar({ participant }: { participant: MatchView["player1"] }) {
+function Avatar({ participant, showBotTag }: { participant: MatchView["player1"]; showBotTag: boolean }) {
   if (!participant) {
     return (
       <div className="flex h-11 w-11 items-center justify-center rounded-full border border-dashed border-arena-border text-arena-silver/40">
@@ -47,7 +48,7 @@ function Avatar({ participant }: { participant: MatchView["player1"] }) {
   return (
     <div className="relative flex h-11 w-11 items-center justify-center rounded-full border-2 border-arena-primary/40 bg-arena-surface-2 text-sm font-bold text-arena-primary-soft">
       {participant.name.slice(0, 1)}
-      {participant.isBot && (
+      {showBotTag && participant.isBot && (
         <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-arena-surface-2 ring-2 ring-arena-surface">
           <Bot className="h-2.5 w-2.5 text-arena-silver" />
         </span>
@@ -60,6 +61,7 @@ export default function BracketPage({ params }: { params: Promise<{ id: string }
   const { id } = use(params);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { showBotTag } = usePreferences();
   const [view, setView] = useState<TournamentView | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Set once from the URL on first render (never re-derived from a later searchParams change —
@@ -210,12 +212,12 @@ export default function BracketPage({ params }: { params: Promise<{ id: string }
               </p>
               <div className="flex items-center justify-around">
                 <div className="flex flex-col items-center gap-1">
-                  <Avatar participant={myMatch.player1} />
+                  <Avatar participant={myMatch.player1} showBotTag={showBotTag} />
                   <span className="max-w-20 truncate text-xs text-arena-silver">{myMatch.player1?.name ?? "未対戦"}</span>
                 </div>
                 <span className="text-xs font-bold text-arena-silver/60">VS</span>
                 <div className="flex flex-col items-center gap-1">
-                  <Avatar participant={myMatch.player2} />
+                  <Avatar participant={myMatch.player2} showBotTag={showBotTag} />
                   <span className="max-w-20 truncate text-xs text-arena-silver">{myMatch.player2?.name ?? "未対戦"}</span>
                 </div>
               </div>
@@ -233,6 +235,7 @@ export default function BracketPage({ params }: { params: Promise<{ id: string }
             totalRounds={Math.log2(view.maxPlayers)}
             freshMatchIds={freshMatchIds}
             playEntrance={isFirstLoad}
+            showBotTag={showBotTag}
           />
         </div>
 

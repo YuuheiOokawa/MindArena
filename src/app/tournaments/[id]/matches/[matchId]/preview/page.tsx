@@ -14,6 +14,7 @@ import { GameRulesCard } from "@/components/common/game-rules-card";
 import { PlayerAvatar } from "@/components/common/player-avatar";
 import { getGameMeta } from "@/config/games";
 import { LeagueBadgeIcon } from "@/components/common/league-badge-icon";
+import { usePreferences } from "@/components/providers/preferences-provider";
 import { Bot, Dices } from "lucide-react";
 
 interface MatchPreview {
@@ -54,6 +55,7 @@ export default function PreMatchPage({ params }: { params: Promise<{ id: string;
 
 function PreMatchSession({ id, matchId }: { id: string; matchId: string }) {
   const router = useRouter();
+  const { showBotTag } = usePreferences();
   const [preview, setPreview] = useState<MatchPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
@@ -133,7 +135,7 @@ function PreMatchSession({ id, matchId }: { id: string; matchId: string }) {
           </CardContent>
         </Card>
 
-        {preview.opponent.isBot && (
+        {showBotTag && preview.opponent.isBot && (
           <div className="-mt-3 flex justify-center">
             <Badge variant="neutral">BOT対戦</Badge>
           </div>

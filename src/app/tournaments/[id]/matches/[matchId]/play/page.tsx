@@ -12,6 +12,7 @@ import { RoundTimer } from "@/components/game/round-timer";
 import { RoundHistoryStrip } from "@/components/game/round-history-strip";
 import { RoundReveal } from "@/components/game/round-reveal";
 import { DEFAULT_GAME_TIMERS } from "@/config/timers";
+import { usePreferences } from "@/components/providers/preferences-provider";
 import { LogOut } from "lucide-react";
 
 interface RoundEntry {
@@ -42,6 +43,7 @@ export default function GamePlayPage({ params }: { params: Promise<{ id: string;
 
 function GamePlaySession({ id, matchId }: { id: string; matchId: string }) {
   const router = useRouter();
+  const { vibrate, playTone } = usePreferences();
   const [myParticipantId, setMyParticipantId] = useState<string | null>(null);
   const [opponentId, setOpponentId] = useState<string | null>(null);
   const [gameName, setGameName] = useState("");
@@ -162,6 +164,8 @@ function GamePlaySession({ id, matchId }: { id: string; matchId: string }) {
         actionType,
         actionData,
       });
+      vibrate(15);
+      playTone("tap");
       applyIncomingState(next, myParticipantId);
     } catch (e) {
       setError(e instanceof ApiClientError ? e.message : "選択の送信に失敗しました。");

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/infrastructure/auth/auth";
 import { getMyMatchHistory } from "@/features/profiles/match-history.service";
+import { playerProfileRepository } from "@/infrastructure/repositories/player-profile.repository";
 import { AppScreen } from "@/components/layout/app-screen";
 import { EmptyState } from "@/components/common/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,7 +12,11 @@ export default async function HistoryPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const matches = await getMyMatchHistory(session.user.id, undefined, 30);
+  const [matches, profile] = await Promise.all([
+    getMyMatchHistory(session.user.id, undefined, 30),
+    playerProfileRepository.findByUserId(session.user.id),
+  ]);
+  const showBotTag = profile?.showBotTag ?? true;
 
   return (
     <AppScreen nav>
@@ -30,7 +35,7 @@ export default async function HistoryPage() {
                   <div>
                     <p className="text-sm font-semibold text-arena-white">{match.gameName}</p>
                     <p className="flex items-center gap-1 text-xs text-arena-silver">
-                      {match.opponentIsBot && <Bot className="h-3 w-3" />}
+                      {showBotTag && match.opponentIsBot && <Bot className="h-3 w-3" />}
                       vs {match.opponentName} ・ {match.leagueName}
                     </p>
                     <p className="text-[11px] text-arena-silver/60">

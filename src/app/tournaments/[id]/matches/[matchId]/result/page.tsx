@@ -12,6 +12,7 @@ import { ConfettiBurst } from "@/components/common/confetti-burst";
 import { AnimatedNumber } from "@/components/common/animated-number";
 import { resumeHref } from "@/features/tournaments/resume-href";
 import type { ResumeScreen } from "@/features/tournaments/resume";
+import { usePreferences } from "@/components/providers/preferences-provider";
 import { Award, Coins, Trophy, XCircle } from "lucide-react";
 
 interface MatchResultView {
@@ -39,6 +40,7 @@ export default function MatchResultPage({ params }: { params: Promise<{ id: stri
 
 function MatchResultSession({ id, matchId }: { id: string; matchId: string }) {
   const router = useRouter();
+  const { vibrate, playTone } = usePreferences();
   const [result, setResult] = useState<MatchResultView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [navigating, setNavigating] = useState(false);
@@ -48,12 +50,20 @@ function MatchResultSession({ id, matchId }: { id: string; matchId: string }) {
   // effects would race two calls and the second (empty) response can clobber the first (real)
   // one — this ref makes the second invocation on the same mount a no-op instead.
   const achievementsFetchStartedRef = useRef(false);
+  const resultFeedbackFiredRef = useRef(false);
 
   useEffect(() => {
     apiClient
       .get<MatchResultView>(`/api/matches/${matchId}/result`)
-      .then(setResult)
+      .then((data) => {
+        setResult(data);
+        if (resultFeedbackFiredRef.current) return;
+        resultFeedbackFiredRef.current = true;
+        vibrate(data.won ? [40, 30, 40] : 80);
+        playTone(data.won ? "win" : "lose");
+      })
       .catch((e) => setError(e instanceof ApiClientError ? e.message : "結果の取得に失敗しました。"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchId]);
 
   useEffect(() => {
@@ -64,8 +74,15 @@ function MatchResultSession({ id, matchId }: { id: string; matchId: string }) {
     achievementsFetchStartedRef.current = true;
     apiClient
       .post<AchievementNotice[]>("/api/profile/me/achievements/unseen")
-      .then(setUnlockedAchievements)
+      .then((notices) => {
+        setUnlockedAchievements(notices);
+        if (notices.length > 0) {
+          vibrate([20, 40, 20, 40, 20]);
+          playTone("achievement");
+        }
+      })
       .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchId]);
 
   async function handleNext() {

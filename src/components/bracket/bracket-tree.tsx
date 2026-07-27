@@ -51,6 +51,7 @@ export function BracketTree({
   totalRounds,
   freshMatchIds,
   playEntrance,
+  showBotTag = true,
 }: {
   rounds: BracketRound[];
   /** The tournament's true total round count (e.g. log2(maxPlayers)) — NOT rounds.length, which
@@ -60,6 +61,7 @@ export function BracketTree({
   totalRounds: number;
   freshMatchIds: Set<string>;
   playEntrance: boolean;
+  showBotTag?: boolean;
 }) {
   if (rounds.length === 0) return null;
 
@@ -105,9 +107,9 @@ export function BracketTree({
                       ...(playEntrance ? ({ "--arena-rise-delay": `${Math.min(i, 10) * 0.03}s` } as React.CSSProperties) : {}),
                     }}
                   >
-                    <MiniParticipantRow participant={match.player1} winnerId={match.winnerParticipantId} resolved={match.status === "COMPLETED"} />
+                    <MiniParticipantRow participant={match.player1} winnerId={match.winnerParticipantId} resolved={match.status === "COMPLETED"} showBotTag={showBotTag} />
                     <div className="h-px bg-arena-border" />
-                    <MiniParticipantRow participant={match.player2} winnerId={match.winnerParticipantId} resolved={match.status === "COMPLETED"} />
+                    <MiniParticipantRow participant={match.player2} winnerId={match.winnerParticipantId} resolved={match.status === "COMPLETED"} showBotTag={showBotTag} />
                   </div>
                 );
               })}
@@ -147,10 +149,12 @@ function MiniParticipantRow({
   participant,
   winnerId,
   resolved,
+  showBotTag,
 }: {
   participant: BracketParticipant | null;
   winnerId: string | null;
   resolved: boolean;
+  showBotTag: boolean;
 }) {
   if (!participant) {
     return <p className="truncate text-arena-silver/40">未対戦</p>;
@@ -158,7 +162,7 @@ function MiniParticipantRow({
   const isWinner = winnerId === participant.id;
   return (
     <div className="flex items-center gap-0.5">
-      {participant.isBot && <Bot className="h-2.5 w-2.5 shrink-0 text-arena-silver/60" />}
+      {showBotTag && participant.isBot && <Bot className="h-2.5 w-2.5 shrink-0 text-arena-silver/60" />}
       <span className={cn("truncate", isWinner ? "font-semibold text-arena-white" : "text-arena-silver")}>{participant.name}</span>
       {resolved && isWinner && <Crown className="h-2.5 w-2.5 shrink-0 text-arena-gold" />}
     </div>
