@@ -181,9 +181,32 @@ model PlayerProfile {
   challengesReceived   FriendChallenge[]       @relation("ChallengeReceived")
   tournamentInvitesSent     TournamentInvite[]  @relation("TournamentInviteSent")
   tournamentInvitesReceived TournamentInvite[]  @relation("TournamentInviteReceived")
+  blocksMade                Block[]             @relation("BlockerOf")
+  blocksReceived            Block[]             @relation("BlockedBy")
 
   @@index([totalPoints])
   @@map("player_profiles")
+}
+
+/**
+ * A one-directional block, doubling as a lightweight report (`reason` is optional free text for
+ * the blocker's own context — no moderation queue reads it yet, this project has no admin panel).
+ * Checked from both directions wherever a blocked pair could otherwise interact (see
+ * features/friends/block.service.ts) — blocking is symmetric in effect even though the row itself
+ * only has one direction.
+ */
+model Block {
+  id        String        @id @default(cuid())
+  blockerId String
+  blocker   PlayerProfile @relation("BlockerOf", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId String
+  blocked   PlayerProfile @relation("BlockedBy", fields: [blockedId], references: [id], onDelete: Cascade)
+  reason    String?
+  createdAt DateTime      @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+  @@map("blocks")
 }
 
 /**

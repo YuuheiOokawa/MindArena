@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LoadingState } from "@/components/common/loading-state";
 import { usePreferences, type Preferences } from "@/components/providers/preferences-provider";
-import { ChevronRight, Mail, ShieldAlert } from "lucide-react";
+import { ChevronRight, KeyRound, Mail, ShieldAlert, ShieldOff } from "lucide-react";
 
 const TOGGLES: { key: keyof Preferences; label: string; description: string }[] = [
   { key: "soundEnabled", label: "効果音", description: "ボタン操作や結果表示の効果音" },
@@ -61,6 +61,28 @@ export default function SettingsPage() {
                 </Card>
               ))}
             </div>
+
+            <section className="flex flex-col gap-2">
+              <h2 className="text-xs font-semibold text-arena-silver">アカウント</h2>
+              <Card>
+                <CardContent className="flex flex-col divide-y divide-arena-border py-0">
+                  <Link href="/settings/password" className="flex items-center justify-between py-3 pt-3.5 text-sm text-arena-white">
+                    <span className="flex items-center gap-2">
+                      <KeyRound className="h-4 w-4 text-arena-primary-soft" />
+                      パスワード変更
+                    </span>
+                    <ChevronRight className="h-4 w-4 text-arena-silver/60" />
+                  </Link>
+                  <Link href="/settings/blocked" className="flex items-center justify-between py-3 pb-3.5 text-sm text-arena-white">
+                    <span className="flex items-center gap-2">
+                      <ShieldOff className="h-4 w-4 text-arena-primary-soft" />
+                      ブロック中のユーザー
+                    </span>
+                    <ChevronRight className="h-4 w-4 text-arena-silver/60" />
+                  </Link>
+                </CardContent>
+              </Card>
+            </section>
 
             <section className="flex flex-col gap-2">
               <h2 className="text-xs font-semibold text-arena-silver">サポート</h2>

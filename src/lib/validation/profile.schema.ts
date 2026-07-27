@@ -36,3 +36,24 @@ export const deactivateAccountSchema = z.object({
 });
 
 export type DeactivateAccountInput = z.infer<typeof deactivateAccountSchema>;
+
+const PASSWORD_HAS_LETTER = /[a-zA-Z]/;
+const PASSWORD_HAS_NUMBER = /[0-9]/;
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "現在のパスワードを入力してください。"),
+    newPassword: z
+      .string()
+      .min(8, "パスワードは8文字以上で入力してください。")
+      .max(72, "パスワードは72文字以内で入力してください。")
+      .regex(PASSWORD_HAS_LETTER, "パスワードには英字を含めてください。")
+      .regex(PASSWORD_HAS_NUMBER, "パスワードには数字を含めてください。"),
+    confirmNewPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmNewPassword, {
+    message: "新しいパスワードが一致しません。",
+    path: ["confirmNewPassword"],
+  });
+
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;

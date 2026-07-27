@@ -3,6 +3,7 @@ import { friendshipRepository } from "@/infrastructure/repositories/friendship.r
 import { friendChallengeRepository } from "@/infrastructure/repositories/friend-challenge.repository";
 import { tournamentInviteRepository } from "@/infrastructure/repositories/tournament-invite.repository";
 import { userRepository } from "@/infrastructure/repositories/user.repository";
+import { blockRepository } from "@/infrastructure/repositories/block.repository";
 import { withKeysLock } from "@/infrastructure/repositories/advisory-lock.repository";
 import { FriendshipStatus } from "@/domain/enums";
 import { AppError } from "@/lib/errors/app-error";
@@ -24,6 +25,10 @@ export async function sendFriendRequest(userId: string, targetUsername: string) 
 
   if (targetProfile.id === profile.id) {
     throw new AppError("CANNOT_FRIEND_SELF");
+  }
+
+  if (await blockRepository.existsEitherWay(profile.id, targetProfile.id)) {
+    throw new AppError("NOT_FOUND", "そのユーザー名のプレイヤーは見つかりませんでした。");
   }
 
   // Locked on both ids so two requests fired within the same instant (either side double-

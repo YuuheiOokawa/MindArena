@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils/cn";
-import { Search, UserPlus, UserCheck, UserX, Users, Inbox, Swords, Check, X } from "lucide-react";
+import { Search, UserPlus, UserCheck, UserX, Users, Inbox, Swords, Check, X, ShieldOff } from "lucide-react";
 
 interface FriendCard {
   profileId: string;
@@ -191,6 +191,21 @@ export default function FriendsPage() {
     }
   }
 
+  async function handleBlock(profileId: string) {
+    if (!window.confirm("このユーザーをブロックしますか？フレンドの場合は解除され、今後お互いに申請や対戦の申し込みができなくなります。")) return;
+    const reason = window.prompt("ブロック理由（任意・空欄のままでも構いません）") ?? undefined;
+    setActionPending(profileId);
+    try {
+      await apiClient.post("/api/friends/blocked", { profileId, reason: reason || undefined });
+      setSearchResult(null);
+      await loadAll();
+    } catch (e) {
+      setError(e instanceof ApiClientError ? e.message : "ブロックに失敗しました。");
+    } finally {
+      setActionPending(null);
+    }
+  }
+
   async function sendChallenge(profileId: string) {
     setActionPending(profileId);
     try {
@@ -294,11 +309,22 @@ export default function FriendsPage() {
                   <p className="truncate text-xs text-arena-silver/70">@{searchResult.username}</p>
                   <p className="truncate text-xs text-arena-silver">{searchResult.league.displayName}</p>
                 </div>
-                <SearchActionButton
-                  result={searchResult}
-                  pending={actionPending === (searchResult.profileId ?? "")}
-                  onSend={() => sendRequest(query.trim())}
-                />
+                <div className="flex shrink-0 items-center gap-1">
+                  <SearchActionButton
+                    result={searchResult}
+                    pending={actionPending === (searchResult.profileId ?? "")}
+                    onSend={() => sendRequest(query.trim())}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleBlock(searchResult.profileId)}
+                    disabled={actionPending === searchResult.profileId}
+                    aria-label="ブロック"
+                  >
+                    <ShieldOff className="h-4 w-4 text-arena-silver/70" />
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
@@ -353,6 +379,15 @@ export default function FriendsPage() {
                         aria-label="フレンド解除"
                       >
                         <UserX className="h-4 w-4 text-arena-danger" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleBlock(friend.profileId)}
+                        disabled={actionPending === friend.profileId}
+                        aria-label="ブロック"
+                      >
+                        <ShieldOff className="h-4 w-4 text-arena-silver/70" />
                       </Button>
                     </div>
                   </CardContent>

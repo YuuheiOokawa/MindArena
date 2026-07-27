@@ -1,6 +1,7 @@
 import { playerProfileRepository } from "@/infrastructure/repositories/player-profile.repository";
 import { friendshipRepository } from "@/infrastructure/repositories/friendship.repository";
 import { userRepository } from "@/infrastructure/repositories/user.repository";
+import { blockRepository } from "@/infrastructure/repositories/block.repository";
 import { FriendshipStatus } from "@/domain/enums";
 import { AppError } from "@/lib/errors/app-error";
 import { toFriendCard } from "./friend-card.mapper";
@@ -52,6 +53,10 @@ export async function searchPlayerByUsername(userId: string, username: string) {
 
   if (targetProfile.id === profile.id) {
     throw new AppError("CANNOT_FRIEND_SELF");
+  }
+
+  if (await blockRepository.existsEitherWay(profile.id, targetProfile.id)) {
+    throw new AppError("NOT_FOUND", "そのユーザー名のプレイヤーは見つかりませんでした。");
   }
 
   const existing = await friendshipRepository.findBetween(profile.id, targetProfile.id);
