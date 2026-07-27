@@ -74,6 +74,7 @@ enum PointReason {
   RUNNER_UP
   CHAMPION
   ACHIEVEMENT_BONUS
+  DAILY_BONUS
   ADMIN_ADJUSTMENT
 }
 
@@ -166,6 +167,10 @@ model PlayerProfile {
   soundEnabled         Boolean  @default(true)
   bgmEnabled           Boolean  @default(true)
   vibrationEnabled     Boolean  @default(true)
+  /** 1-7, cycling — day 7 pays the biggest reward then wraps back to day 1 (config/daily-bonus.ts).
+   * Resets to 0 (next claim starts the cycle at day 1) if a calendar day (JST) is missed. */
+  loginBonusStreak         Int       @default(0)
+  lastLoginBonusClaimedAt  DateTime?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
