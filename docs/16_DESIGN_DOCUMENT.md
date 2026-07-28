@@ -81,8 +81,9 @@ src/
 
 ## 4. 画面一覧
 
-全28画面。認証必須画面は原則すべて下部ナビ (ホーム/リーグ/トーナメント/戦績/プロフィール) を持つ
-`AppScreen nav` レイアウトを共有する。
+全30画面。認証必須画面は原則すべて下部ナビ (ホーム/リーグ/部屋/戦績/プロフィール) を持つ
+`AppScreen nav` レイアウトを共有する。トーナメントへの参加導線はリーグ画面に統合されており、
+専用の「トーナメント」タブは存在しない(§5参照)。
 
 ### 4.1 認証・オンボーディング
 
@@ -98,8 +99,7 @@ src/
 
 | パス | 画面名 | 概要 | 認証 |
 |---|---|---|---|
-| `/home` | ホーム | プロフィール要約カード、デイリーボーナス、今日のミッション、トーナメント再開/参加導線、最近の対戦結果、お知らせ | 必要 |
-| `/tournaments/join` | リーグ選択・参加 | 参加するリーグを選び、トーナメントに参加(即BOT補充またはフレンド募集) | 必要 |
+| `/home` | ホーム | プロフィール要約カード、デイリーボーナス、今日のミッション、トーナメント再開/参加導線(未参加時は`/leagues`へ)、最近の対戦結果、お知らせ | 必要 |
 | `/tournaments/friend-lobby` | フレンド対戦ロビー | 特定リーグでフレンドを招待してから開始するトーナメント募集画面 | 必要 |
 | `/tournaments/[id]/matchmaking` | マッチメイキング中 | 参加者(人間+BOT)が揃うのを待つ演出画面 | 必要 |
 | `/tournaments/[id]/bracket` | トーナメント表 | 現在のブラケット(対戦表)と自分の次の試合への導線を表示 | 必要 |
@@ -112,10 +112,11 @@ src/
 
 | パス | 画面名 | 概要 | 認証 |
 |---|---|---|---|
-| `/leagues` | リーグ一覧 | 全10リーグの一覧、到達状況表示 | 必要 |
-| `/leagues/[leagueId]` | リーグ詳細 | 個別リーグの詳細(必要ポイント・報酬倍率・獲得トロフィー等) | 必要 |
+| `/leagues` | リーグ一覧 | 全10リーグの一覧、到達状況表示。下部ナビ「リーグ」タブの遷移先 | 必要 |
+| `/leagues/[leagueId]` | リーグ詳細・参加 | 個別リーグの詳細(必要ポイント・報酬・使用ゲーム・BOT難易度)に加え、フレンド招待導線と「トーナメントに参加する」ボタンを統合(旧`/tournaments/join?league=`を統合) | 必要 |
 | `/leaderboard` | ランキング | 全体/自リーグのポイントランキング | 必要 |
-| `/shop` | ショップ | 賞金(prizeCurrency)で購入できる背景・バッジ等コスメティックアイテム | 必要 |
+| `/shop` | ショップ | 「プロフィール」(背景・バッジ・称号)と「部屋・家具」の2タブ。賞金(prizeCurrency)で購入 | 必要 |
+| `/room` | 部屋購入・マイルーム | 未購入時は部屋購入画面、購入済みならマイルーム画面(家具の配置・移動・回転・撤去)を直接表示。下部ナビ「部屋」タブの遷移先 | 必要 |
 | `/history` | 戦績 | 過去の対戦履歴一覧 | 必要 |
 | `/how-to-play` | 遊び方 | 4つの心理戦ゲームのルールをまとめたリファレンス | 必要 |
 
@@ -160,15 +161,17 @@ flowchart TD
     subgraph nav["下部ナビ - 認証後は常時表示"]
         Home
         Leagues["/leagues"]
-        JoinTournament["/tournaments/join"]
+        Room["/room"]
         History["/history"]
         Profile["/profile"]
     end
 
-    Home -->|参加/対戦を続ける| JoinTournament
+    Home -->|未参加時: 参加する| Leagues
+    Home -->|参加中: 対戦を続ける| Bracket
     Home -->|今日のミッション・ボーナス| Home
-    JoinTournament -->|リーグ選択→参加| Matchmaking["/tournaments/[id]/matchmaking"]
-    JoinTournament -->|フレンドと遊ぶ| FriendLobby["/tournaments/friend-lobby"]
+    Leagues --> LeagueDetail["/leagues/[leagueId]"]
+    LeagueDetail -->|トーナメントに参加する| Matchmaking["/tournaments/[id]/matchmaking"]
+    LeagueDetail -->|フレンドを自分で選ぶ| FriendLobby["/tournaments/friend-lobby"]
     FriendLobby --> Matchmaking
 
     Matchmaking --> Bracket["/tournaments/[id]/bracket"]
@@ -180,7 +183,10 @@ flowchart TD
     Result -->|敗退| Home
     Champion --> Home
 
-    Leagues --> LeagueDetail["/leagues/[leagueId]"]
+    Room -->|未購入| RoomBuy["部屋購入画面(同一route)"]
+    Room -->|購入済み| MyRoom["マイルーム画面(同一route)"]
+    RoomBuy -->|購入| MyRoom
+    MyRoom -->|ショップで家具を探す| Shop
 
     Profile --> ProfileEdit["/profile/edit"]
     Profile --> Settings["/settings"]
@@ -216,7 +222,13 @@ flowchart TD
 
 ## 6. ER図
 
-Prisma スキーマ (`prisma/schema.prisma`) 全25モデルの関係を示す。主要フィールドのみ抜粋。
+Prisma スキーマ (`prisma/schema.prisma`) 作成時点の主要25モデルの関係を示す。主要フィールドのみ抜粋。
+
+> ⚠️ 未反映: その後追加された `RoomType` / `UserRoom` / `ShopFurnitureItem` / `UserOwnedFurniture` /
+> `RoomFurniturePlacement`(マイルーム機能、計5モデル)と、`PointTransaction.round` 列・
+> `PointReason` の `ROUND_*_ELIMINATION` 系の値(ベスト4未到達ペナルティ)は、この節の図には
+> まだ含まれていない(スキーマ上には存在する。現在合計30モデル)。次回この節を更新する際に
+> 反映すること。
 
 ```mermaid
 erDiagram

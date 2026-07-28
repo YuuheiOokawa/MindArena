@@ -25,7 +25,7 @@ export default async function LeaguesPage() {
         <header className="flex items-center justify-between gap-2">
           <div>
             <h1 className="text-lg font-bold text-arena-white">リーグ一覧</h1>
-            <p className="text-xs text-arena-silver">ポイントを貯めて上位リーグを解放しよう。</p>
+            <p className="text-xs text-arena-silver">リーグを選んでトーナメントに参加しよう。</p>
           </div>
           <Link
             href="/leaderboard"

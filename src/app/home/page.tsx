@@ -132,7 +132,7 @@ export default async function HomePage() {
         </Card>
 
         <Button asChild variant="gold" size="default">
-          <Link href={inTournament ? resumeHref(resume) : "/tournaments/join"} className="flex items-center justify-center gap-2">
+          <Link href={inTournament ? resumeHref(resume) : "/leagues"} className="flex items-center justify-center gap-2">
             <Trophy className="h-4 w-4" />
             {inTournament ? "対戦を続ける" : "トーナメントに参加"}
           </Link>

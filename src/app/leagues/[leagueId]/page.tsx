@@ -9,6 +9,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LeagueBadgeIcon } from "@/components/common/league-badge-icon";
+import { JoinTournamentButton } from "@/components/leagues/join-tournament-button";
+import { Dices, UserPlus, Users } from "lucide-react";
 
 export default async function LeagueDetailPage({ params }: { params: Promise<{ leagueId: string }> }) {
   const { leagueId } = await params;
@@ -59,13 +61,38 @@ export default async function LeagueDetailPage({ params }: { params: Promise<{ l
           </CardContent>
         </Card>
 
-        {league.unlocked ? (
-          <Button asChild>
-            <Link href={`/tournaments/join?league=${league.id}`}>このリーグのトーナメントに参加</Link>
-          </Button>
-        ) : (
-          <Button disabled>ポイントが不足しています</Button>
+        {league.unlocked && (
+          <>
+            <Card>
+              <CardContent className="flex items-center gap-3 py-4">
+                <Users className="h-5 w-5 shrink-0 text-arena-silver" />
+                <p className="text-xs text-arena-silver">
+                  32人制シングルエリミネーション。同じリーグ以上のフレンドには自動で招待が届き、参加人数が不足している場合はBOTが自動で補充されます。
+                </p>
+              </CardContent>
+            </Card>
+
+            <Link
+              href={`/tournaments/friend-lobby?league=${league.id}`}
+              className="flex items-center justify-between rounded-2xl border border-arena-border bg-white/[0.03] px-4 py-3.5 text-sm font-medium text-arena-white transition-colors hover:border-arena-primary/40"
+            >
+              <span className="flex items-center gap-2">
+                <UserPlus className="h-4 w-4 text-arena-primary-soft" />
+                招待するフレンドを自分で選ぶ
+              </span>
+              <span className="text-arena-silver/60">›</span>
+            </Link>
+
+            <Card className="border-arena-primary/20 bg-arena-primary/5">
+              <CardContent className="flex items-center gap-3 py-4">
+                <Dices className="h-5 w-5 shrink-0 text-arena-primary-soft" />
+                <p className="text-xs text-arena-silver">各試合のゲームは、対戦開始前に4種類からランダムで1つ選ばれます。</p>
+              </CardContent>
+            </Card>
+          </>
         )}
+
+        {league.unlocked ? <JoinTournamentButton leagueId={league.id} /> : <Button disabled>ポイントが不足しています</Button>}
       </div>
     </AppScreen>
   );

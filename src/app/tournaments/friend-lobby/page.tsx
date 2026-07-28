@@ -56,7 +56,7 @@ function LeaguePicker() {
   }, []);
 
   return (
-    <AppScreen header={<FocusHeader title="フレンドと大会を開く" backHref="/tournaments/join" />}>
+    <AppScreen header={<FocusHeader title="フレンドと大会を開く" backHref="/leagues" />}>
       <div className="flex flex-col gap-4 px-4 pb-8 pt-4">
         <p className="text-xs text-arena-silver">大会を開くリーグを選択してください。</p>
         {error && <ErrorState message={error} />}
