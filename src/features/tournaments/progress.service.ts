@@ -10,6 +10,7 @@ import { awardPoints } from "@/features/points/award-points.service";
 import { simulateBotVsBotMatch } from "@/features/games/core/simulate-bot-match";
 import { generateBracket, isFinalRound, pairNextRound } from "@/domain/services/bracket.service";
 import { findNewlyMetAchievements } from "@/domain/services/achievement-check.service";
+import { toJstDateKey } from "@/domain/services/daily-bonus.service";
 import { hashStringToSeed } from "@/lib/utils/seeded-random";
 import { MatchStatus, ParticipantStatus, ParticipantType, PointReason, TournamentStatus } from "@/domain/enums";
 import { ROUND_CLEAR_REASON } from "@/config/round-rewards";
@@ -232,6 +233,7 @@ export async function finalizeMatchResult(
         await awardLeagueTrophy(tx, winner.playerId, league.id);
       }
       await checkAndUnlockAchievements(tx, winner.playerId, league);
+      await incrementDailyMissionCounters(tx, winner.playerId, true);
     }
 
     if (loser.type === ParticipantType.HUMAN && loser.playerId) {
@@ -241,6 +243,7 @@ export async function finalizeMatchResult(
         await updateStatsOnly(tx, loser.playerId, false, match.gameTypeId);
       }
       await checkAndUnlockAchievements(tx, loser.playerId, league);
+      await incrementDailyMissionCounters(tx, loser.playerId, false);
     }
 
     if (isFinal) {
@@ -368,6 +371,24 @@ async function checkAndUnlockAchievements(tx: Tx, playerProfileId: string, leagu
       overrideAmount: achievement.rewardPoints,
     });
   }
+}
+
+/** Feeds today's ミッション progress (features/daily-missions/daily-missions.service.ts). Lazily
+ * resets both counters to 0 the first time they're touched on a new JST calendar day — no cron
+ * job needed, matching PlayerProfile.dailyMissionDate's doc comment. */
+async function incrementDailyMissionCounters(tx: Tx, playerProfileId: string, won: boolean) {
+  const profile = await tx.playerProfile.findUniqueOrThrow({ where: { id: playerProfileId } });
+  const todayKey = toJstDateKey(new Date());
+  const isStale = profile.dailyMissionDate !== todayKey;
+
+  await tx.playerProfile.update({
+    where: { id: playerProfileId },
+    data: {
+      dailyMissionDate: todayKey,
+      dailyMatchesPlayed: isStale ? 1 : { increment: 1 },
+      dailyWins: won ? (isStale ? 1 : { increment: 1 }) : isStale ? 0 : undefined,
+    },
+  });
 }
 
 /** Once every match in a round is complete, pairs winners into the next round and auto-resolves any all-BOT matches there. */

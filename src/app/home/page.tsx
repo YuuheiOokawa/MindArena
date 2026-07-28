@@ -20,6 +20,7 @@ import { APP_CONFIG } from "@/config/app";
 import { PlayerAvatar } from "@/components/common/player-avatar";
 import { LeagueBadgeIcon } from "@/components/common/league-badge-icon";
 import { DailyBonusCard } from "@/components/home/daily-bonus-card";
+import { DailyMissionsCard } from "@/components/home/daily-missions-card";
 import { ANNOUNCEMENTS } from "@/config/announcements";
 
 export default async function HomePage() {
@@ -114,6 +115,8 @@ export default async function HomePage() {
         </Button>
 
         <DailyBonusCard />
+
+        <DailyMissionsCard />
 
         <div className="grid grid-cols-3 gap-2">
           <StatTile label="勝率" value={`${profile.winRate}%`} accent />

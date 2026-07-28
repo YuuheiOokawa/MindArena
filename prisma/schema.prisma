@@ -171,6 +171,12 @@ model PlayerProfile {
    * Resets to 0 (next claim starts the cycle at day 1) if a calendar day (JST) is missed. */
   loginBonusStreak         Int       @default(0)
   lastLoginBonusClaimedAt  DateTime?
+  /** JST date key (YYYY-MM-DD) the two counters below are counting FOR — a mismatch against
+   * "today" means they're stale from a previous day and read as 0 (lazy reset, no cron job;
+   * see features/daily-missions/daily-missions.service.ts). */
+  dailyMissionDate     String?
+  dailyMatchesPlayed   Int      @default(0)
+  dailyWins            Int      @default(0)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
@@ -188,6 +194,7 @@ model PlayerProfile {
   tournamentInvitesReceived TournamentInvite[]  @relation("TournamentInviteReceived")
   blocksMade                Block[]             @relation("BlockerOf")
   blocksReceived            Block[]             @relation("BlockedBy")
+  dailyMissionClaims        DailyMissionClaim[]
 
   @@index([totalPoints])
   @@map("player_profiles")
@@ -212,6 +219,21 @@ model Block {
   @@unique([blockerId, blockedId])
   @@index([blockedId])
   @@map("blocks")
+}
+
+/** One row per (player, mission, day) claimed — the source of truth for "already claimed today"
+ * and the race-safety guard for claiming (see features/daily-missions/daily-missions.service.ts).
+ * `claimedForDate` is a JST date key (YYYY-MM-DD), matching PlayerProfile.dailyMissionDate. */
+model DailyMissionClaim {
+  id              String        @id @default(cuid())
+  playerProfileId String
+  playerProfile   PlayerProfile @relation(fields: [playerProfileId], references: [id], onDelete: Cascade)
+  missionCode     String
+  claimedForDate  String
+  createdAt       DateTime      @default(now())
+
+  @@unique([playerProfileId, missionCode, claimedForDate])
+  @@map("daily_mission_claims")
 }
 
 /**
