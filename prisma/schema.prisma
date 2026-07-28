@@ -73,6 +73,9 @@ enum PointReason {
   SEMIFINAL_CLEAR
   RUNNER_UP
   CHAMPION
+  ROUND_1_ELIMINATION
+  ROUND_2_ELIMINATION
+  QUARTERFINAL_ELIMINATION
   ACHIEVEMENT_BONUS
   DAILY_BONUS
   ADMIN_ADJUSTMENT
@@ -195,6 +198,8 @@ model PlayerProfile {
   blocksMade                Block[]             @relation("BlockerOf")
   blocksReceived            Block[]             @relation("BlockedBy")
   dailyMissionClaims        DailyMissionClaim[]
+  room                      UserRoom?
+  ownedFurniture            UserOwnedFurniture[]
 
   @@index([totalPoints])
   @@map("player_profiles")
@@ -316,6 +321,8 @@ model League {
   profiles    PlayerProfile[]
   tournaments Tournament[]
   trophies    LeagueTrophy[]
+  roomTypes         RoomType[]
+  requiredByFurniture ShopFurnitureItem[]
 
   @@index([displayOrder])
   @@map("leagues")
@@ -406,6 +413,151 @@ model CosmeticPurchase {
 
   @@unique([playerProfileId, cosmeticItemId])
   @@map("cosmetic_purchases")
+}
+
+// ---------------------------------------------------------------------------
+// マイルーム (rooms + furniture) — a second prizeCurrency sink alongside the profile-cosmetic
+// shop above. See features/rooms/ and features/shop/furniture.service.ts.
+// ---------------------------------------------------------------------------
+
+enum RoomFurnitureCategory {
+  DESK
+  CHAIR
+  BED
+  SOFA
+  TABLE
+  STORAGE
+  LIGHTING
+  WALL_ART
+  RUG
+  PLANT
+  GAMING
+  TROPHY
+  LUXURY
+  LEAGUE_EXCLUSIVE
+}
+
+enum RoomFurnitureRarity {
+  COMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+/** Master data for the 4 room sizes (小/中/大/特大) — capacity, price, and the league gate are
+ * all data here, not scattered constants (mirrors the League/GameType/Achievement master-data
+ * pattern already used elsewhere in this schema). */
+model RoomType {
+  id                String   @id @default(cuid())
+  code              String   @unique
+  name              String
+  /** 家具配置上限 */
+  capacity          Int
+  /** Price to buy this size directly — only meaningful for the first (SMALL) room; every size
+   * after that is reached via `upgradePrice` from the previous size, never bought standalone. */
+  purchasePrice     Int
+  /** Cost to upgrade INTO this size from the previous one. 0 for SMALL (the entry purchase). */
+  upgradePrice      Int
+  requiredLeagueId  String
+  requiredLeague    League   @relation(fields: [requiredLeagueId], references: [id])
+  /** Grid dimensions for the placement surface (features/rooms/room-grid.ts). */
+  width             Int
+  height            Int
+  sortOrder         Int
+  isActive          Boolean  @default(true)
+
+  userRooms UserRoom[]
+
+  @@index([sortOrder])
+  @@map("room_types")
+}
+
+/** A player's single マイルーム. Deliberately `playerProfileId @unique` — one active room per
+ * player (source spec §11: "1ユーザーにつき、有効なマイルームは原則1つ"). Upgrading changes
+ * `roomTypeId` in place rather than creating a new row, so placed furniture never needs migrating. */
+model UserRoom {
+  id              String    @id @default(cuid())
+  playerProfileId String    @unique
+  playerProfile   PlayerProfile @relation(fields: [playerProfileId], references: [id], onDelete: Cascade)
+  roomTypeId      String
+  roomType        RoomType  @relation(fields: [roomTypeId], references: [id])
+  purchasedAt     DateTime  @default(now())
+  upgradedAt      DateTime?
+  updatedAt       DateTime  @updatedAt
+
+  placements RoomFurniturePlacement[]
+
+  @@map("user_rooms")
+}
+
+/** Shop catalog for room furniture — a parallel, larger catalog to CosmeticItem above (profile
+ * decorations), kept as a separate model because furniture needs grid dimensions, a room-league
+ * gate independent of the profile-cosmetic one, and a stackable/quantity concept cosmetics don't. */
+model ShopFurnitureItem {
+  id               String                @id @default(cuid())
+  code             String                @unique
+  name             String
+  description      String
+  category         RoomFurnitureCategory
+  rarity           RoomFurnitureRarity   @default(COMMON)
+  price            Int
+  /** Null = purchasable regardless of league (most items). Set for "リーグ限定商品". */
+  requiredLeagueId String?
+  requiredLeague   League?               @relation(fields: [requiredLeagueId], references: [id])
+  /** Grid footprint in room units. */
+  width            Int
+  height           Int
+  /** No real asset/texture pipeline exists yet — a swatch/icon lookup key, same shape as
+   * CosmeticItem.assetKey, that the client maps to a color/icon (features/rooms/furniture-visuals.ts). */
+  colorKey         String
+  /** false (default): can only ever be purchased/owned once, like every CosmeticItem. true:
+   * repeat purchases increment UserOwnedFurniture.quantity instead of being rejected as
+   * ALREADY_OWNED, and up to `quantity` copies can be placed in the room simultaneously. */
+  stackable        Boolean               @default(false)
+  isActive         Boolean               @default(true)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  ownedBy UserOwnedFurniture[]
+
+  @@map("shop_furniture_items")
+}
+
+/** Ownership record for a purchased ShopFurnitureItem — the "所持家具" list. */
+model UserOwnedFurniture {
+  id              String            @id @default(cuid())
+  playerProfileId String
+  playerProfile   PlayerProfile     @relation(fields: [playerProfileId], references: [id], onDelete: Cascade)
+  shopItemId      String
+  shopItem        ShopFurnitureItem @relation(fields: [shopItemId], references: [id])
+  quantity        Int               @default(1)
+  acquiredAt      DateTime          @default(now())
+
+  placements RoomFurniturePlacement[]
+
+  @@unique([playerProfileId, shopItemId])
+  @@map("user_owned_furniture")
+}
+
+/** One row per furniture instance currently placed in a room — grid position + 90°-step
+ * rotation (source spec §8: "配置位置をX座標、Y座標、回転角度で保存"). Deliberately flat
+ * (x/y/rotation ints) rather than a richer transform so this is a trivial swap-in for a future
+ * isometric/3D renderer that just needs a different interpretation of the same 3 numbers. */
+model RoomFurniturePlacement {
+  id               String             @id @default(cuid())
+  userRoomId       String
+  userRoom         UserRoom           @relation(fields: [userRoomId], references: [id], onDelete: Cascade)
+  ownedFurnitureId String
+  ownedFurniture   UserOwnedFurniture @relation(fields: [ownedFurnitureId], references: [id], onDelete: Cascade)
+  positionX        Int
+  positionY        Int
+  /** Degrees, one of 0/90/180/270. */
+  rotation         Int                @default(0)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([userRoomId])
+  @@map("room_furniture_placements")
 }
 
 model Announcement {
@@ -586,6 +738,10 @@ model PointTransaction {
   reason          PointReason
   tournamentId    String?
   leagueId        String?
+  /** Tournament round this transaction relates to (1-indexed; 5 = final), for ROUND_*_CLEAR,
+   * ROUND_*_ELIMINATION, CHAMPION, and RUNNER_UP reasons — lets the match result screen show
+   * "到達ラウンド" without a separate history table (see features/tournaments/progress.service.ts). */
+  round           Int?
   balanceBefore   Int
   balanceAfter    Int
   createdAt       DateTime      @default(now())

@@ -13,6 +13,7 @@ export const pointTransactionRepository = {
       reason: PointReason;
       tournamentId?: string;
       leagueId?: string;
+      round?: number;
       balanceBefore: number;
       balanceAfter: number;
     },

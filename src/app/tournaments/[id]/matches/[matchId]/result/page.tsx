@@ -13,7 +13,8 @@ import { AnimatedNumber } from "@/components/common/animated-number";
 import { resumeHref } from "@/features/tournaments/resume-href";
 import type { ResumeScreen } from "@/features/tournaments/resume";
 import { usePreferences } from "@/components/providers/preferences-provider";
-import { Award, Coins, Trophy, XCircle } from "lucide-react";
+import { LeagueBadgeIcon } from "@/components/common/league-badge-icon";
+import { Award, Coins, Flag, Trophy, TrendingDown, TrendingUp, XCircle } from "lucide-react";
 
 interface MatchResultView {
   won: boolean;
@@ -22,6 +23,11 @@ interface MatchResultView {
   opponentName: string;
   tournamentId: string;
   pointsEarned: number;
+  outcomeLabel: string;
+  pointsBefore: number | null;
+  pointsAfter: number | null;
+  league: { displayName: string; themeKey: string } | null;
+  leagueChange: "PROMOTED" | "DEMOTED" | "NONE";
 }
 
 interface AchievementNotice {
@@ -139,16 +145,51 @@ function MatchResultSession({ id, matchId }: { id: string; matchId: string }) {
               <p className="text-arena-silver">-</p>
               <ScoreBlock label="相手" value={result.opponentScore} />
             </div>
-            {result.pointsEarned > 0 && (
-              <>
-                <div className="h-px bg-arena-border" />
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-arena-silver">獲得ポイント</span>
-                  <span className="flex items-center gap-1 text-base font-bold tabular-nums text-arena-gold">
-                    <Coins className="h-4 w-4" />+<AnimatedNumber value={result.pointsEarned} />P
-                  </span>
-                </div>
-              </>
+
+            <div className="h-px bg-arena-border" />
+
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-xs text-arena-silver">
+                <Flag className="h-3.5 w-3.5" />
+                到達ラウンド
+              </span>
+              <span className="text-sm font-semibold text-arena-white">{result.outcomeLabel}</span>
+            </div>
+
+            {result.pointsEarned !== 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-arena-silver">{result.pointsEarned > 0 ? "獲得ポイント" : "ポイント変動"}</span>
+                <span
+                  className={`flex items-center gap-1 text-base font-bold tabular-nums ${
+                    result.pointsEarned > 0 ? "text-arena-gold" : "text-arena-silver"
+                  }`}
+                >
+                  <Coins className="h-4 w-4" />
+                  {result.pointsEarned > 0 ? "+" : "-"}
+                  <AnimatedNumber value={Math.abs(result.pointsEarned)} />P
+                </span>
+              </div>
+            )}
+
+            {result.pointsBefore !== null && result.pointsAfter !== null && (
+              <p className="text-right text-[11px] text-arena-silver/60">
+                {result.pointsBefore.toLocaleString()} → {result.pointsAfter.toLocaleString()} pt
+              </p>
+            )}
+
+            {result.league && result.leagueChange !== "NONE" && (
+              <div
+                className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold arena-pop-in ${
+                  result.leagueChange === "PROMOTED"
+                    ? "border border-arena-gold/40 bg-arena-gold/10 text-arena-gold"
+                    : "border border-arena-border bg-arena-surface-2/60 text-arena-silver"
+                }`}
+                style={{ animationDelay: "0.3s" }}
+              >
+                {result.leagueChange === "PROMOTED" ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                <LeagueBadgeIcon themeKey={result.league.themeKey} />
+                {result.leagueChange === "PROMOTED" ? "昇格！" : "降格"} — {result.league.displayName}
+              </div>
             )}
           </CardContent>
         </Card>

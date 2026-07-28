@@ -60,6 +60,13 @@ export enum PointReason {
   SEMIFINAL_CLEAR = "SEMIFINAL_CLEAR",
   RUNNER_UP = "RUNNER_UP",
   CHAMPION = "CHAMPION",
+  /** Eliminated in round 1 (1回戦敗退, "ベスト32" finish) — the earliest, most heavily penalized exit. */
+  ROUND_1_ELIMINATION = "ROUND_1_ELIMINATION",
+  /** Eliminated in round 2 ("ベスト16" finish). */
+  ROUND_2_ELIMINATION = "ROUND_2_ELIMINATION",
+  /** Eliminated in round 3 / the quarterfinal ("ベスト8" finish). Round 4 (semifinal) losers
+   * finish "ベスト4" and are deliberately NOT penalized — see config/round-rewards.ts. */
+  QUARTERFINAL_ELIMINATION = "QUARTERFINAL_ELIMINATION",
   ACHIEVEMENT_BONUS = "ACHIEVEMENT_BONUS",
   DAILY_BONUS = "DAILY_BONUS",
   ADMIN_ADJUSTMENT = "ADMIN_ADJUSTMENT",
@@ -109,4 +116,7 @@ export const POINT_REASON_TO_ROUND: Partial<Record<PointReason, TournamentRound>
   [PointReason.ROUND_2_CLEAR]: TournamentRound.ROUND_OF_16,
   [PointReason.QUARTERFINAL_CLEAR]: TournamentRound.QUARTERFINAL,
   [PointReason.SEMIFINAL_CLEAR]: TournamentRound.SEMIFINAL,
+  [PointReason.ROUND_1_ELIMINATION]: TournamentRound.ROUND_OF_32,
+  [PointReason.ROUND_2_ELIMINATION]: TournamentRound.ROUND_OF_16,
+  [PointReason.QUARTERFINAL_ELIMINATION]: TournamentRound.QUARTERFINAL,
 };

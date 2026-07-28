@@ -16,6 +16,12 @@ export type AppErrorCode =
   | "INSUFFICIENT_FUNDS"
   | "ALREADY_OWNED"
   | "ITEM_NOT_OWNED"
+  | "LEAGUE_LOCKED"
+  | "ALREADY_MAX_SIZE"
+  | "OVER_CAPACITY"
+  | "PLACEMENT_OVERLAP"
+  | "OUT_OF_BOUNDS"
+  | "OVER_OWNED_QUANTITY"
   | "INTERNAL_ERROR";
 
 const DEFAULT_MESSAGES: Record<AppErrorCode, string> = {
@@ -36,6 +42,12 @@ const DEFAULT_MESSAGES: Record<AppErrorCode, string> = {
   INSUFFICIENT_FUNDS: "賞金が足りません。",
   ALREADY_OWNED: "すでに所持しているアイテムです。",
   ITEM_NOT_OWNED: "このアイテムはまだ所持していません。",
+  LEAGUE_LOCKED: "必要リーグに到達していません。",
+  ALREADY_MAX_SIZE: "すでに最大サイズの部屋です。",
+  OVER_CAPACITY: "家具の配置可能数を超えています。",
+  PLACEMENT_OVERLAP: "その場所にはすでに別の家具があります。",
+  OUT_OF_BOUNDS: "部屋の範囲外には配置できません。",
+  OVER_OWNED_QUANTITY: "所持している数を超えて配置することはできません。",
   INTERNAL_ERROR: "予期しないエラーが発生しました。時間をおいて再度お試しください。",
 };
 

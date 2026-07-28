@@ -26,7 +26,7 @@ interface RawState {
   gameId: string;
   round: number;
   totalRounds: number;
-  status: "IN_PROGRESS" | "AWAITING_TIEBREAK" | "COMPLETE";
+  status: "IN_PROGRESS" | "COMPLETE";
   scores: Record<string, number>;
   history: RoundEntry[];
   [key: string]: unknown;

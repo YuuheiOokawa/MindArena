@@ -13,7 +13,7 @@ import { findNewlyMetAchievements } from "@/domain/services/achievement-check.se
 import { toJstDateKey } from "@/domain/services/daily-bonus.service";
 import { hashStringToSeed } from "@/lib/utils/seeded-random";
 import { MatchStatus, ParticipantStatus, ParticipantType, PointReason, TournamentStatus } from "@/domain/enums";
-import { ROUND_CLEAR_REASON } from "@/config/round-rewards";
+import { ROUND_CLEAR_REASON, ROUND_ELIMINATION_REASON } from "@/config/round-rewards";
 import { DEFAULT_GAME_TIMERS } from "@/config/timers";
 import { BASE_CHAMPION_PRIZE } from "@/config/points";
 import { ACHIEVEMENTS } from "@/config/achievements";
@@ -227,7 +227,7 @@ export async function finalizeMatchResult(
 
     if (winner.type === ParticipantType.HUMAN && winner.playerId) {
       const reason = isFinal ? PointReason.CHAMPION : ROUND_CLEAR_REASON[match.round];
-      await rewardAndUpdateStats(tx, winner.playerId, reason, match.tournament.id, league, true, match.gameTypeId, isFinal);
+      await rewardAndUpdateStats(tx, winner.playerId, reason, match.tournament.id, league, true, match.gameTypeId, isFinal, match.round);
       if (isFinal) {
         await awardChampionPrize(tx, winner.playerId, league.rewardMultiplier);
         await awardLeagueTrophy(tx, winner.playerId, league.id);
@@ -238,9 +238,15 @@ export async function finalizeMatchResult(
 
     if (loser.type === ParticipantType.HUMAN && loser.playerId) {
       if (isFinal) {
-        await rewardAndUpdateStats(tx, loser.playerId, PointReason.RUNNER_UP, match.tournament.id, league, false, match.gameTypeId, false);
+        await rewardAndUpdateStats(tx, loser.playerId, PointReason.RUNNER_UP, match.tournament.id, league, false, match.gameTypeId, false, match.round);
       } else {
         await updateStatsOnly(tx, loser.playerId, false, match.gameTypeId);
+        // "ベスト4"(round 4 敗退)は原則ペナルティなし — ROUND_ELIMINATION_REASON に round 4 の
+        // エントリが存在しないため、この分岐は round 1〜3 敗退のときだけ動く。
+        const eliminationReason = ROUND_ELIMINATION_REASON[match.round];
+        if (eliminationReason) {
+          await applyEliminationPenalty(tx, loser.playerId, eliminationReason, match.tournament.id, league, match.round);
+        }
       }
       await checkAndUnlockAchievements(tx, loser.playerId, league);
       await incrementDailyMissionCounters(tx, loser.playerId, false);
@@ -274,6 +280,7 @@ async function rewardAndUpdateStats(
   won: boolean,
   gameTypeId: string,
   isChampion: boolean,
+  round: number,
 ) {
   const profile = await tx.playerProfile.findUniqueOrThrow({ where: { id: playerProfileId } });
   await awardPoints(tx, {
@@ -283,8 +290,39 @@ async function rewardAndUpdateStats(
     league,
     tournamentId,
     leagueId: league.id,
+    round,
   });
   await updateStatsOnly(tx, playerProfileId, won, gameTypeId, isChampion);
+}
+
+/**
+ * Deducts league points for being eliminated before "ベスト4" (round 1〜3 losses) — negative
+ * BASE_POINT_REWARDS entries in config/points.ts, scaled by the same league.rewardMultiplier as
+ * every positive reward so higher leagues lose more per early exit. Reuses awardPoints/
+ * applyTransaction as-is, so the existing floor-at-0 clamp (domain/services/points.service.ts)
+ * and automatic league re-sync (features/points/award-points.service.ts's syncCurrentLeague,
+ * which already recomputes currentLeagueId purely from totalPoints in both directions) apply
+ * with zero new code — a big enough streak of penalties can legitimately demote a player, the
+ * same existing mechanism that promotes them.
+ */
+async function applyEliminationPenalty(
+  tx: Tx,
+  playerProfileId: string,
+  reason: PointReason,
+  tournamentId: string,
+  league: { id: string; rewardMultiplier: number },
+  round: number,
+) {
+  const profile = await tx.playerProfile.findUniqueOrThrow({ where: { id: playerProfileId } });
+  await awardPoints(tx, {
+    playerProfileId,
+    currentPoints: profile.totalPoints,
+    reason,
+    league,
+    tournamentId,
+    leagueId: league.id,
+    round,
+  });
 }
 
 /** 賞金 (prizeCurrency): a spendable shop wallet, separate from the points ladder that drives league placement. */

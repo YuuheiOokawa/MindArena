@@ -29,7 +29,7 @@ export interface GameState {
   sessionId: string;
   round: number;
   totalRounds: number;
-  status: "IN_PROGRESS" | "AWAITING_TIEBREAK" | "COMPLETE";
+  status: "IN_PROGRESS" | "COMPLETE";
   scores: Record<string, number>;
   /** Per-round history, most recent last, used for opponent-tendency displays. */
   history: RoundRecord[];

@@ -10,6 +10,8 @@ import { ACHIEVEMENTS } from "../src/config/achievements";
 import { FRAME_TIERS } from "../src/config/frames";
 import { TITLES } from "../src/config/titles";
 import { SHOP_ITEMS } from "../src/config/shop-items";
+import { ROOM_TYPES } from "../src/config/room-types";
+import { FURNITURE_ITEMS } from "../src/config/furniture";
 import { APP_CONFIG } from "../src/config/app";
 import { calculateReward } from "../src/domain/services/points.service";
 import { PointReason } from "../src/domain/enums";
@@ -191,6 +193,72 @@ async function seedCosmetics() {
   console.log(`Seeded ${FRAME_TIERS.length} frames, ${TITLES.length} titles, and ${SHOP_ITEMS.length} shop items.`);
 }
 
+async function seedRoomsAndFurniture(leagueIds: Map<string, string>) {
+  for (const roomType of ROOM_TYPES) {
+    const requiredLeagueId = leagueIds.get(roomType.requiredLeagueCode)!;
+    await prisma.roomType.upsert({
+      where: { code: roomType.code },
+      update: {
+        name: roomType.name,
+        capacity: roomType.capacity,
+        purchasePrice: roomType.purchasePrice,
+        upgradePrice: roomType.upgradePrice,
+        requiredLeagueId,
+        width: roomType.width,
+        height: roomType.height,
+        sortOrder: roomType.sortOrder,
+        isActive: true,
+      },
+      create: {
+        code: roomType.code,
+        name: roomType.name,
+        capacity: roomType.capacity,
+        purchasePrice: roomType.purchasePrice,
+        upgradePrice: roomType.upgradePrice,
+        requiredLeagueId,
+        width: roomType.width,
+        height: roomType.height,
+        sortOrder: roomType.sortOrder,
+      },
+    });
+  }
+
+  for (const item of FURNITURE_ITEMS) {
+    const requiredLeagueId = item.requiredLeagueCode ? leagueIds.get(item.requiredLeagueCode)! : null;
+    await prisma.shopFurnitureItem.upsert({
+      where: { code: item.code },
+      update: {
+        name: item.name,
+        description: item.description,
+        category: item.category,
+        rarity: item.rarity,
+        price: item.price,
+        requiredLeagueId,
+        width: item.width,
+        height: item.height,
+        colorKey: item.colorKey,
+        stackable: item.stackable ?? false,
+        isActive: true,
+      },
+      create: {
+        code: item.code,
+        name: item.name,
+        description: item.description,
+        category: item.category,
+        rarity: item.rarity,
+        price: item.price,
+        requiredLeagueId,
+        width: item.width,
+        height: item.height,
+        colorKey: item.colorKey,
+        stackable: item.stackable ?? false,
+      },
+    });
+  }
+
+  console.log(`Seeded ${ROOM_TYPES.length} room types and ${FURNITURE_ITEMS.length} furniture items.`);
+}
+
 async function seedDemoUser(entryLeagueId: string) {
   if (process.env.NODE_ENV === "production") {
     console.log("Skipping demo user (NODE_ENV=production).");
@@ -221,6 +289,7 @@ async function main() {
   await seedBots();
   await seedAchievements();
   await seedCosmetics();
+  await seedRoomsAndFurniture(leagueIds);
 
   const entryLeagueCode = LEAGUES.find((l) => l.requiredPoints === 0)!.code;
   await seedDemoUser(leagueIds.get(entryLeagueCode)!);

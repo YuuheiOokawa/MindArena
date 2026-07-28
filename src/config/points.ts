@@ -12,6 +12,14 @@ export const BASE_POINT_REWARDS: Record<PointReason, number> = {
   [PointReason.SEMIFINAL_CLEAR]: 70,
   [PointReason.RUNNER_UP]: 120,
   [PointReason.CHAMPION]: 250,
+  // Elimination penalties (負の値) — earlier exits cost more. Round 4 (semifinal, "ベスト4"
+  // finish) is deliberately not represented here: no PointReason exists for it, so no penalty
+  // can ever be applied at that stage. Scaled by the same league.rewardMultiplier as every other
+  // reason (domain/services/points.service.ts), so higher leagues lose more per elimination —
+  // the same knob that already makes higher leagues earn more per round survived.
+  [PointReason.ROUND_1_ELIMINATION]: -20,
+  [PointReason.ROUND_2_ELIMINATION]: -12,
+  [PointReason.QUARTERFINAL_ELIMINATION]: -6,
   [PointReason.ACHIEVEMENT_BONUS]: 0, // amount is supplied per-achievement, see config/achievements.ts
   [PointReason.DAILY_BONUS]: 0, // amount is supplied per-day-tier, see config/daily-bonus.ts
   [PointReason.ADMIN_ADJUSTMENT]: 0, // amount is supplied by the admin action itself

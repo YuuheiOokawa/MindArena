@@ -59,11 +59,17 @@ function statusForCode(code: string): number {
     case "ALREADY_FRIENDS":
     case "FRIEND_REQUEST_EXISTS":
     case "ALREADY_OWNED":
+    case "ALREADY_MAX_SIZE":
       return 409;
     case "TOURNAMENT_NOT_JOINABLE":
     case "MATCH_NOT_READY":
     case "INSUFFICIENT_FUNDS":
     case "ITEM_NOT_OWNED":
+    case "LEAGUE_LOCKED":
+    case "OVER_CAPACITY":
+    case "PLACEMENT_OVERLAP":
+    case "OUT_OF_BOUNDS":
+    case "OVER_OWNED_QUANTITY":
       return 422;
     default:
       return 500;

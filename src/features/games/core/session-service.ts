@@ -7,8 +7,10 @@ import { redactStateForParticipant } from "@/features/games/core/redaction";
 import { finalizeMatchResult } from "@/features/tournaments/progress.service";
 import { coinFlip } from "@/domain/services/tiebreak";
 import { isFinalRound } from "@/domain/services/bracket.service";
+import { getCurrentLeague } from "@/domain/services/league-progress.service";
+import { leagueRepository } from "@/infrastructure/repositories/league.repository";
 import { DEFAULT_GAME_TIMERS } from "@/config/timers";
-import { ROUND_CLEAR_REASON } from "@/config/round-rewards";
+import { ROUND_CLEAR_REASON, ROUND_ELIMINATION_REASON, describeRoundOutcome } from "@/config/round-rewards";
 import { MatchStatus, PointReason, type ParticipantType } from "@/domain/enums";
 import { AppError } from "@/lib/errors/app-error";
 import { isE2eTestMode } from "@/lib/e2e-test-mode";
@@ -216,10 +218,10 @@ export async function getMatchResultForParticipant(matchId: string, participantI
   const resultData = result.resultData as unknown as { rounds?: unknown[] } | null;
 
   const me = match.player1ParticipantId === participantId ? match.player1 : match.player2;
-  const pointsEarned =
-    won && me?.playerId
-      ? await findAwardedPointsForRound(me.playerId, match.tournamentId, match.round, match.tournament.maxPlayers)
-      : 0;
+  const isFinal = isFinalRound(match.round, match.tournament.maxPlayers);
+  const pointsInfo = me?.playerId
+    ? await findPointChangeForMatch(me.playerId, match.tournamentId, match.round, won, isFinal)
+    : null;
 
   return {
     matchId,
@@ -230,18 +232,46 @@ export async function getMatchResultForParticipant(matchId: string, participantI
     rounds: resultData?.rounds ?? [],
     round: match.round,
     tournamentId: match.tournamentId,
-    pointsEarned,
+    pointsEarned: pointsInfo?.change ?? 0,
+    outcomeLabel: describeRoundOutcome(match.round, won, isFinal),
+    pointsBefore: pointsInfo?.before ?? null,
+    pointsAfter: pointsInfo?.after ?? null,
+    league: pointsInfo?.league ?? null,
+    leagueChange: pointsInfo?.leagueChange ?? "NONE",
   };
 }
 
-async function findAwardedPointsForRound(playerProfileId: string, tournamentId: string, round: number, maxPlayers: number) {
-  const isFinal = isFinalRound(round, maxPlayers);
-  const reason = isFinal ? PointReason.CHAMPION : ROUND_CLEAR_REASON[round];
-  if (!reason) return 0;
+/** Looks up the actual PointTransaction this match produced for `playerProfileId` (win reward,
+ * runner-up, or elimination penalty — never for a "ベスト4"/round-4 loss, which produces none),
+ * and derives the league the player was in before vs. after so the result screen can show a
+ * promotion/demotion moment using purely already-existing data (no new storage). */
+async function findPointChangeForMatch(playerProfileId: string, tournamentId: string, round: number, won: boolean, isFinal: boolean) {
+  const reason = isFinal
+    ? won
+      ? PointReason.CHAMPION
+      : PointReason.RUNNER_UP
+    : won
+      ? ROUND_CLEAR_REASON[round]
+      : ROUND_ELIMINATION_REASON[round];
+  if (!reason) return null;
 
   const transaction = await prisma.pointTransaction.findFirst({
     where: { playerProfileId, tournamentId, reason },
     orderBy: { createdAt: "desc" },
   });
-  return transaction?.amount ?? 0;
+  if (!transaction) return null;
+
+  const leagues = await leagueRepository.findAllActive();
+  const leagueBefore = getCurrentLeague(transaction.balanceBefore, leagues);
+  const leagueAfter = getCurrentLeague(transaction.balanceAfter, leagues);
+  const leagueChange =
+    leagueAfter.displayOrder > leagueBefore.displayOrder ? "PROMOTED" : leagueAfter.displayOrder < leagueBefore.displayOrder ? "DEMOTED" : "NONE";
+
+  return {
+    change: transaction.amount,
+    before: transaction.balanceBefore,
+    after: transaction.balanceAfter,
+    league: { displayName: leagueAfter.displayName, themeKey: leagueAfter.themeKey },
+    leagueChange,
+  } as const;
 }

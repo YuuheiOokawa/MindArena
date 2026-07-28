@@ -18,6 +18,7 @@ export async function awardPoints(
     league: { rewardMultiplier: number };
     tournamentId?: string;
     leagueId?: string;
+    round?: number;
     /** Bypasses the league-multiplier calculation for flat, non-scaling grants (e.g. an
      * achievement's fixed reward — see config/achievements.ts). */
     overrideAmount?: number;
@@ -33,6 +34,7 @@ export async function awardPoints(
     reason: params.reason,
     tournamentId: params.tournamentId,
     leagueId: params.leagueId,
+    round: params.round,
     balanceBefore: ledger.balanceBefore,
     balanceAfter: ledger.balanceAfter,
   });
