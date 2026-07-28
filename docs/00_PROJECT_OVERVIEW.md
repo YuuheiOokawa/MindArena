@@ -62,3 +62,6 @@ See `04_ARCHITECTURE.md` for the full directory layout and dependency rules.
 12. `13_TEST_PLAN.md` — unit/integration/E2E coverage.
 13. `14_IMPLEMENTATION_PLAN.md` — phased build order actually followed.
 14. `15_FUTURE_ROADMAP.md` — what's deliberately deferred and how it plugs in later.
+15. `16_DESIGN_DOCUMENT.md` — 実装追従版の設計書(日本語)。技術スタック・全画面一覧・画面遷移図・
+    ER図・機能説明を1ファイルにまとめたもの。docs/00〜15 が初期MVP構想時点の設計であるのに対し、
+    こちらはフレンド対戦/ショップ/実績/デイリー機能などその後の追加分も反映した現在の実装ベース。
