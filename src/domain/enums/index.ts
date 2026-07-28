@@ -72,6 +72,22 @@ export enum PointReason {
   ADMIN_ADJUSTMENT = "ADMIN_ADJUSTMENT",
 }
 
+export const POINT_REASON_LABEL: Record<PointReason, string> = {
+  [PointReason.TOURNAMENT_ENTRY]: "トーナメント参加",
+  [PointReason.ROUND_1_CLEAR]: "1回戦突破",
+  [PointReason.ROUND_2_CLEAR]: "2回戦突破",
+  [PointReason.QUARTERFINAL_CLEAR]: "準々決勝突破",
+  [PointReason.SEMIFINAL_CLEAR]: "準決勝突破",
+  [PointReason.RUNNER_UP]: "準優勝",
+  [PointReason.CHAMPION]: "優勝",
+  [PointReason.ROUND_1_ELIMINATION]: "1回戦敗退",
+  [PointReason.ROUND_2_ELIMINATION]: "2回戦敗退",
+  [PointReason.QUARTERFINAL_ELIMINATION]: "準々決勝敗退",
+  [PointReason.ACHIEVEMENT_BONUS]: "実績報酬",
+  [PointReason.DAILY_BONUS]: "デイリーボーナス",
+  [PointReason.ADMIN_ADJUSTMENT]: "運営による調整",
+};
+
 export enum TimeoutPolicy {
   RANDOM_ACTION = "RANDOM_ACTION",
   FORFEIT_ROUND = "FORFEIT_ROUND",

@@ -69,6 +69,14 @@ export async function getMyProfile(userId: string) {
       pointsToNext: progress.pointsToNext,
       progressRatio: progress.progressRatio,
     },
+    highestLeague: profile.highestLeague
+      ? {
+          id: profile.highestLeague.id,
+          displayName: profile.highestLeague.displayName,
+          themeKey: profile.highestLeague.themeKey,
+          reachedAt: profile.highestLeagueAt,
+        }
+      : null,
     frame: { current: frame, next: nextFrame },
     background: background ? { assetKey: background.assetKey, name: background.name } : null,
     badge: badge ? { assetKey: badge.assetKey, name: badge.name } : null,
@@ -140,8 +148,8 @@ export async function getMyAchievementCatalog(userId: string) {
   });
 }
 
-export async function getMyPointHistory(userId: string, cursor?: string) {
+export async function getMyPointHistory(userId: string, cursor?: string, limit = 20) {
   const profile = await playerProfileRepository.findByUserId(userId);
   if (!profile) throw new AppError("NOT_FOUND", "プロフィールが見つかりません。");
-  return playerProfileRepository.listPointHistory(profile.id, cursor);
+  return playerProfileRepository.listPointHistory(profile.id, cursor, limit);
 }

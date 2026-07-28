@@ -39,6 +39,8 @@ async function main() {
     data: {
       totalPoints: 0,
       currentLeagueId: entryLeague.id,
+      highestLeagueId: null,
+      highestLeagueAt: null,
       totalMatches: 0,
       totalWins: 0,
       totalLosses: 0,

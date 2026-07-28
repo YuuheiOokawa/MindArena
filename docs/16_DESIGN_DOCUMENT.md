@@ -99,7 +99,7 @@ src/
 
 | パス | 画面名 | 概要 | 認証 |
 |---|---|---|---|
-| `/home` | ホーム | プロフィール要約カード、デイリーボーナス、今日のミッション、トーナメント再開/参加導線(未参加時は`/leagues`へ)、最近の対戦結果、お知らせ | 必要 |
+| `/home` | ホーム | 豪華演出付きプロフィール要約カード(保有ポイント・次のリーグ進捗・最高到達リーグと到達日・勝率/総対戦数)、デイリーボーナス、今日のミッション、トーナメント再開/参加導線(未参加時は`/leagues`へ)、総勝利数/連勝記録/最高到達リーグの強化ステータスタイル、最近の対戦結果、お知らせ | 必要 |
 | `/tournaments/friend-lobby` | フレンド対戦ロビー | 特定リーグでフレンドを招待してから開始するトーナメント募集画面 | 必要 |
 | `/tournaments/[id]/matchmaking` | マッチメイキング中 | 参加者(人間+BOT)が揃うのを待つ演出画面 | 必要 |
 | `/tournaments/[id]/bracket` | トーナメント表 | 現在のブラケット(対戦表)と自分の次の試合への導線を表示 | 必要 |
@@ -115,6 +115,7 @@ src/
 | `/leagues` | リーグ一覧 | 全10リーグの一覧、到達状況表示。下部ナビ「リーグ」タブの遷移先 | 必要 |
 | `/leagues/[leagueId]` | リーグ詳細・参加 | 個別リーグの詳細(必要ポイント・報酬・使用ゲーム・BOT難易度)に加え、フレンド招待導線と「トーナメントに参加する」ボタンを統合(旧`/tournaments/join?league=`を統合) | 必要 |
 | `/leaderboard` | ランキング | 全体/自リーグのポイントランキング | 必要 |
+| `/points/history` | ポイント履歴 | 獲得/減少したポイントの取引履歴一覧(理由・増減・残高)。ホームのプロフィールカードから遷移 | 必要 |
 | `/shop` | ショップ | 「プロフィール」(背景・バッジ・称号)と「部屋・家具」の2タブ。賞金(prizeCurrency)で購入 | 必要 |
 | `/room` | 部屋購入・マイルーム | 未購入時は部屋購入画面、購入済みならマイルーム画面(家具の配置・移動・回転・撤去)を直接表示。下部ナビ「部屋」タブの遷移先 | 必要 |
 | `/history` | 戦績 | 過去の対戦履歴一覧 | 必要 |
@@ -169,6 +170,7 @@ flowchart TD
     Home -->|未参加時: 参加する| Leagues
     Home -->|参加中: 対戦を続ける| Bracket
     Home -->|今日のミッション・ボーナス| Home
+    Home -->|ポイント履歴| PointHistory["/points/history"]
     Leagues --> LeagueDetail["/leagues/[leagueId]"]
     LeagueDetail -->|トーナメントに参加する| Matchmaking["/tournaments/[id]/matchmaking"]
     LeagueDetail -->|フレンドを自分で選ぶ| FriendLobby["/tournaments/friend-lobby"]
@@ -226,9 +228,10 @@ Prisma スキーマ (`prisma/schema.prisma`) 作成時点の主要25モデルの
 
 > ⚠️ 未反映: その後追加された `RoomType` / `UserRoom` / `ShopFurnitureItem` / `UserOwnedFurniture` /
 > `RoomFurniturePlacement`(マイルーム機能、計5モデル)と、`PointTransaction.round` 列・
-> `PointReason` の `ROUND_*_ELIMINATION` 系の値(ベスト4未到達ペナルティ)は、この節の図には
-> まだ含まれていない(スキーマ上には存在する。現在合計30モデル)。次回この節を更新する際に
-> 反映すること。
+> `PointReason` の `ROUND_*_ELIMINATION` 系の値(ベスト4未到達ペナルティ)、および
+> `PlayerProfile.highestLeagueId` / `highestLeagueAt`(最高到達リーグの記録、`League` への
+> 2本目のリレーション)は、この節の図にはまだ含まれていない(スキーマ上には存在する)。
+> 次回この節を更新する際に反映すること。
 
 ```mermaid
 erDiagram
@@ -601,6 +604,7 @@ Next.js Route Handler (`src/app/api/**/route.ts`) として実装。認証が必
 | トーナメント | `POST /api/tournaments/join`, `GET /api/tournaments/resume`, `GET/POST /api/tournaments/[id]/*` |
 | 対戦 | `GET /api/matches/[matchId]/preview`, `POST /api/matches/[matchId]/session/actions`, `GET /api/matches/[matchId]/result` |
 | プロフィール | `GET /api/profile/me`, `/achievements`, `/game-stats`, `/history`, `/win-rate-trend`, `PATCH /settings` `/cosmetics` `/display-name` |
+| ポイント | `GET /api/points/history`(カーソルページング) |
 | リーグ/ランキング | `GET /api/leagues`, `/api/leagues/[leagueId]`, `/api/leaderboard` |
 | ショップ | `GET /api/shop`, `POST /api/shop/purchase`, `POST /api/shop/equip` |
 | デイリー | `GET/POST /api/daily-bonus`, `/api/daily-bonus/claim`, `/api/daily-missions`, `/api/daily-missions/claim` |

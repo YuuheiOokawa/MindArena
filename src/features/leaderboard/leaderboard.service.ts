@@ -24,6 +24,22 @@ function toEntry(profile: RankedProfile, rank: number, viewerProfileId: string) 
 
 export type LeaderboardScope = "global" | "league";
 
+/** Lightweight rank lookup for the home screen's "TOP X%" stat — skips the top-50 entries fetch
+ * that getLeaderboard() does, since only the viewer's own standing is needed here. */
+export async function getMyGlobalRank(userId: string) {
+  const profile = await playerProfileRepository.findByUserId(userId);
+  if (!profile) throw new AppError("NOT_FOUND", "プロフィールが見つかりません。");
+
+  const [aboveCount, totalPlayers] = await Promise.all([
+    playerProfileRepository.countAbovePoints(profile.totalPoints),
+    playerProfileRepository.countAll(),
+  ]);
+  const rank = aboveCount + 1;
+  const percentile = totalPlayers > 0 ? (rank / totalPlayers) * 100 : 100;
+
+  return { rank, totalPlayers, percentile };
+}
+
 export async function getLeaderboard(userId: string, scope: LeaderboardScope) {
   const profile = await playerProfileRepository.findByUserId(userId);
   if (!profile) throw new AppError("NOT_FOUND", "プロフィールが見つかりません。");

@@ -51,6 +51,12 @@ export async function awardPoints(
  * opponent cards) would silently show/use a player's STARTING league forever. Every point award
  * is exactly the moment totalPoints can cross a league threshold, so recomputing here keeps it
  * accurate going forward for every profile without needing a background job.
+ *
+ * Also maintains `highestLeagueId`/`highestLeagueAt` — the highest league this player has EVER
+ * reached. Distinct from currentLeagueId, which can now go DOWN (elimination penalties can drop
+ * totalPoints below a league's threshold — see config/points.ts's ROUND_*_ELIMINATION entries),
+ * so "highest ever" needs its own high-water-mark tracking rather than being derivable from
+ * totalPoints/currentLeagueId alone.
  */
 async function syncCurrentLeague(tx: Tx, playerProfileId: string, totalPoints: number) {
   const league = await tx.league.findFirst({
@@ -58,8 +64,19 @@ async function syncCurrentLeague(tx: Tx, playerProfileId: string, totalPoints: n
     orderBy: { requiredPoints: "desc" },
   });
   if (!league) return;
-  await tx.playerProfile.updateMany({
-    where: { id: playerProfileId, currentLeagueId: { not: league.id } },
-    data: { currentLeagueId: league.id },
+
+  const profile = await tx.playerProfile.findUniqueOrThrow({
+    where: { id: playerProfileId },
+    select: { currentLeagueId: true, highestLeague: { select: { displayOrder: true } } },
   });
+
+  const data: { currentLeagueId?: string; highestLeagueId?: string; highestLeagueAt?: Date } = {};
+  if (profile.currentLeagueId !== league.id) data.currentLeagueId = league.id;
+  if (!profile.highestLeague || league.displayOrder > profile.highestLeague.displayOrder) {
+    data.highestLeagueId = league.id;
+    data.highestLeagueAt = new Date();
+  }
+  if (Object.keys(data).length === 0) return;
+
+  await tx.playerProfile.update({ where: { id: playerProfileId }, data });
 }

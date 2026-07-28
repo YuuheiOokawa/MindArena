@@ -148,6 +148,13 @@ model PlayerProfile {
   lifetimePrizeCurrency Int     @default(0)
   currentLeagueId      String
   currentLeague        League   @relation(fields: [currentLeagueId], references: [id])
+  /** The highest league this player has EVER reached — distinct from currentLeagueId, which can
+   * now go down (elimination penalties can drop totalPoints below a league's threshold; see
+   * features/points/award-points.service.ts's syncCurrentLeague). Null only for a brand-new
+   * profile that has never had a point award applied yet. */
+  highestLeagueId      String?
+  highestLeague        League?  @relation("HighestLeague", fields: [highestLeagueId], references: [id])
+  highestLeagueAt      DateTime?
   totalMatches         Int      @default(0)
   totalWins            Int      @default(0)
   totalLosses          Int      @default(0)
@@ -318,9 +325,10 @@ model League {
   displayOrder        Int
   isActive            Boolean       @default(true)
 
-  profiles    PlayerProfile[]
-  tournaments Tournament[]
-  trophies    LeagueTrophy[]
+  profiles        PlayerProfile[]
+  highestByProfiles PlayerProfile[] @relation("HighestLeague")
+  tournaments     Tournament[]
+  trophies        LeagueTrophy[]
   roomTypes         RoomType[]
   requiredByFurniture ShopFurnitureItem[]
 

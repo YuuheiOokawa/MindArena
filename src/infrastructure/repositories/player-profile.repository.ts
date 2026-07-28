@@ -3,11 +3,11 @@ import type { Prisma } from "@/generated/prisma/client";
 
 export const playerProfileRepository = {
   async findByUserId(userId: string) {
-    return prisma.playerProfile.findUnique({ where: { userId }, include: { currentLeague: true } });
+    return prisma.playerProfile.findUnique({ where: { userId }, include: { currentLeague: true, highestLeague: true } });
   },
 
   async findById(id: string) {
-    return prisma.playerProfile.findUnique({ where: { id }, include: { currentLeague: true } });
+    return prisma.playerProfile.findUnique({ where: { id }, include: { currentLeague: true, highestLeague: true } });
   },
 
   async create(data: { userId: string; displayName: string; currentLeagueId: string }) {
