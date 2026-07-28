@@ -56,6 +56,10 @@ export interface LeagueLuxuryTier {
   badgeClass: string;
   /** rgba() used for both the box-shadow glow and --arena-glow-color/--arena-shimmer-color. */
   glowColor: string;
+  /** Mind King exclusive: replaces the gradient border + shimmer with a spinning rainbow ring,
+   * a soft rainbow halo, and twinkling sparkles (see components/common/rainbow-luxury.tsx) — the
+   * single top league gets a presentation no other tier shares, rather than just a brighter gold. */
+  rainbow?: boolean;
 }
 
 export const LEAGUE_LUXURY: Record<string, LeagueLuxuryTier> = {
@@ -133,11 +137,12 @@ export const LEAGUE_LUXURY: Record<string, LeagueLuxuryTier> = {
   },
   "mind-king": {
     level: 4,
-    headerGradient: "from-arena-gold/35 via-arena-primary/20 to-transparent",
+    headerGradient: "from-arena-gold/20 via-arena-primary/15 to-transparent",
     border: "border-arena-gold/70",
     avatarBorder: "border-arena-gold",
     badgeClass: "bg-arena-gold/20 text-arena-gold border-arena-gold/50",
     glowColor: "rgba(224, 178, 86, 0.65)",
+    rainbow: true,
   },
 };
 
@@ -146,7 +151,8 @@ const DEFAULT_LUXURY: LeagueLuxuryTier = {
   headerGradient: "from-arena-primary/10 to-transparent",
   border: "border-arena-primary/30",
   avatarBorder: "border-arena-primary",
-  badgeClass: "bg-arena-primary/15 text-arena-primary-soft border-arena-primary/30",
+  badgeClass:
+    "bg-arena-primary/15 text-arena-primary-soft border-arena-primary/30",
   glowColor: "rgba(139, 92, 246, 0.3)",
 };
 

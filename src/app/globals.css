@@ -51,8 +51,16 @@ body {
    without overpowering legibility (source spec: keep dark themes readable, not flashy). */
 .arena-ambient-bg {
   background:
-    radial-gradient(60% 40% at 50% 0%, rgba(139, 92, 246, 0.16), transparent 70%),
-    radial-gradient(50% 30% at 100% 100%, rgba(224, 178, 86, 0.05), transparent 70%),
+    radial-gradient(
+      60% 40% at 50% 0%,
+      rgba(139, 92, 246, 0.16),
+      transparent 70%
+    ),
+    radial-gradient(
+      50% 30% at 100% 100%,
+      rgba(224, 178, 86, 0.05),
+      transparent 70%
+    ),
     var(--color-arena-bg);
 }
 
@@ -138,7 +146,8 @@ body {
   }
 }
 .arena-rise-in {
-  animation: arena-rise-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) var(--arena-rise-delay, 0s) both;
+  animation: arena-rise-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1)
+    var(--arena-rise-delay, 0s) both;
 }
 
 @keyframes arena-confetti-fall {
@@ -151,7 +160,8 @@ body {
   }
   100% {
     opacity: 0;
-    transform: translate(var(--arena-confetti-drift, 0px), 140px) rotate(var(--arena-confetti-spin, 360deg));
+    transform: translate(var(--arena-confetti-drift, 0px), 140px)
+      rotate(var(--arena-confetti-spin, 360deg));
   }
 }
 .arena-confetti-piece {
@@ -161,7 +171,8 @@ body {
   width: 7px;
   height: 12px;
   background: var(--arena-confetti-color, var(--color-arena-gold));
-  animation: arena-confetti-fall var(--arena-confetti-duration, 1.4s) ease-in var(--arena-confetti-delay, 0s) both;
+  animation: arena-confetti-fall var(--arena-confetti-duration, 1.4s) ease-in
+    var(--arena-confetti-delay, 0s) both;
   border-radius: 1px;
 }
 
@@ -195,9 +206,87 @@ body {
   left: 0;
   width: 35%;
   height: 100%;
-  background: linear-gradient(115deg, transparent, var(--arena-shimmer-color, rgba(255, 255, 255, 0.35)), transparent);
+  background: linear-gradient(
+    115deg,
+    transparent,
+    var(--arena-shimmer-color, rgba(255, 255, 255, 0.35)),
+    transparent
+  );
   animation: arena-shimmer-sweep 3.4s ease-in-out infinite both;
   pointer-events: none;
+}
+
+/* Mind King exclusive presentation (source: user request — the single top league should read as
+   visibly iridescent, not just a brighter gold). A spinning rainbow ring replaces the shared
+   gradient border, a blurred rainbow halo glows behind the card, and a few sparkles twinkle over
+   it. See components/common/rainbow-luxury.tsx for the wrapper that applies these classes.
+   `@property` gives the conic-gradient a smoothly interpolating angle; browsers without support
+   just see a static (still colorful) ring instead of a spin — a harmless degrade. */
+@property --arena-rainbow-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes arena-rainbow-spin {
+  to {
+    --arena-rainbow-angle: 360deg;
+  }
+}
+
+.arena-rainbow-ring {
+  --arena-rainbow-angle: 0deg;
+  background: conic-gradient(
+    from var(--arena-rainbow-angle),
+    #ff4d6d,
+    #ff9f43,
+    #ffe066,
+    #6bff8e,
+    #4dd9ff,
+    #6b7bff,
+    #d16bff,
+    #ff4d6d
+  );
+  animation: arena-rainbow-spin 4s linear infinite;
+}
+
+.arena-rainbow-halo {
+  position: absolute;
+  inset: -14px;
+  z-index: -1;
+  background: conic-gradient(
+    from var(--arena-rainbow-angle),
+    #ff4d6d,
+    #ff9f43,
+    #ffe066,
+    #6bff8e,
+    #4dd9ff,
+    #6b7bff,
+    #d16bff,
+    #ff4d6d
+  );
+  filter: blur(18px);
+  opacity: 0.55;
+  animation: arena-rainbow-spin 4s linear infinite;
+}
+
+@keyframes arena-twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.4) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(20deg);
+  }
+}
+.arena-sparkle-piece {
+  position: absolute;
+  color: #fff;
+  opacity: 0;
+  animation: arena-twinkle 2.2s ease-in-out infinite;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.8));
 }
 
 /* Same overrides as the OS-level media query below, applied instead when the player has turned
@@ -209,7 +298,10 @@ body.arena-reduced-motion .arena-glow-pulse,
 body.arena-reduced-motion .arena-shake-once,
 body.arena-reduced-motion .arena-rise-in,
 body.arena-reduced-motion .arena-confetti-piece,
-body.arena-reduced-motion .arena-shimmer::after {
+body.arena-reduced-motion .arena-shimmer::after,
+body.arena-reduced-motion .arena-rainbow-ring,
+body.arena-reduced-motion .arena-rainbow-halo,
+body.arena-reduced-motion .arena-sparkle-piece {
   animation-duration: 0.01ms !important;
   animation-iteration-count: 1 !important;
 }
@@ -220,7 +312,10 @@ body.arena-reduced-motion .arena-shimmer::after {
   .arena-shake-once,
   .arena-rise-in,
   .arena-confetti-piece,
-  .arena-shimmer::after {
+  .arena-shimmer::after,
+  .arena-rainbow-ring,
+  .arena-rainbow-halo,
+  .arena-sparkle-piece {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
