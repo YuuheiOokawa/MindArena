@@ -16,6 +16,9 @@ export interface AchievementConfig {
   conditionType: AchievementConditionType;
   conditionValue: number;
   rewardPoints: number;
+  /** Excluded from the catalog's locked view — name/description/progress stay concealed until
+   * unlocked, so the player discovers it by surprise rather than chasing a visible checklist. */
+  hidden?: boolean;
 }
 
 export const ACHIEVEMENTS: AchievementConfig[] = [
@@ -31,4 +34,11 @@ export const ACHIEVEMENTS: AchievementConfig[] = [
   { code: "WIN_RATE_60", name: "勝率60%以上", description: "10戦以上のうえで勝率60%以上を達成した。", conditionType: "WIN_RATE_MIN_10_MATCHES", conditionValue: 60, rewardPoints: 50 },
   { code: "TOP_LEAGUE_UNLOCKED", name: "上位リーグ解放", description: "ダイヤモンドリーグ以上を解放した。", conditionType: "LEAGUE_REACHED", conditionValue: 7000, rewardPoints: 60 },
   { code: "MIND_KING_REACHED", name: "MIND KING到達", description: "最高峰リーグ「MIND KING」に到達した。", conditionType: "LEAGUE_REACHED", conditionValue: 75000, rewardPoints: 300 },
+
+  // 隠れ実績 — locked entries stay concealed on the catalog screen until unlocked.
+  { code: "FLAWLESS_RECORD", name: "無敗の伝説", description: "10戦以上をこなし、勝率100%を保っている。", conditionType: "WIN_RATE_MIN_10_MATCHES", conditionValue: 100, rewardPoints: 150, hidden: true },
+  { code: "WIN_STREAK_10", name: "常勝街道", description: "10連勝を達成した。", conditionType: "WIN_STREAK", conditionValue: 10, rewardPoints: 120, hidden: true },
+  { code: "CHAMPION_5", name: "覇者の中の覇者", description: "トーナメントで5回優勝した。", conditionType: "TOURNAMENT_WINS", conditionValue: 5, rewardPoints: 150, hidden: true },
+  { code: "TOURNAMENTS_50", name: "百戦錬磨", description: "50回のトーナメントに参加した。", conditionType: "TOURNAMENT_ENTRIES", conditionValue: 50, rewardPoints: 80, hidden: true },
+  { code: "POINTS_100000", name: "頭脳の探求者", description: "累計100,000ポイントを獲得した。", conditionType: "LEAGUE_REACHED", conditionValue: 100000, rewardPoints: 500, hidden: true },
 ];

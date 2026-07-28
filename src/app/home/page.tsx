@@ -14,7 +14,7 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Bell, Bot, Calendar, Coins, Mail, Megaphone, Swords, Trophy } from "lucide-react";
+import { Bell, Bot, Calendar, Coins, Crown, Mail, Megaphone, Swords, Trophy } from "lucide-react";
 import { resumeHref } from "@/features/tournaments/resume-href";
 import { APP_CONFIG } from "@/config/app";
 import { PlayerAvatar } from "@/components/common/player-avatar";
@@ -22,6 +22,9 @@ import { LeagueBadgeIcon } from "@/components/common/league-badge-icon";
 import { DailyBonusCard } from "@/components/home/daily-bonus-card";
 import { DailyMissionsCard } from "@/components/home/daily-missions-card";
 import { ANNOUNCEMENTS } from "@/config/announcements";
+import { TITLES } from "@/config/titles";
+import { getLeagueLuxury } from "@/config/league-visuals";
+import { cn } from "@/lib/utils/cn";
 
 export default async function HomePage() {
   const session = await auth();
@@ -39,6 +42,14 @@ export default async function HomePage() {
   // "champion" is a one-time celebration screen reached right after the winning match, not a
   // place to route back into from Home — once seen, Home should offer a fresh tournament again.
   const inTournament = resume.screen !== "home" && resume.screen !== "champion";
+
+  const title = TITLES.find((t) => t.id === profile.selectedTitleId) ?? TITLES[0];
+  const luxury = getLeagueLuxury(profile.league.current.themeKey);
+  const luxuryStyle = {
+    ...(luxury.level >= 2 ? { boxShadow: `0 0 24px -12px ${luxury.glowColor}` } : {}),
+    ...(luxury.level >= 3 ? { "--arena-glow-color": luxury.glowColor } : {}),
+    ...(luxury.level >= 4 ? { "--arena-shimmer-color": luxury.glowColor } : {}),
+  } as React.CSSProperties;
 
   return (
     <AppScreen nav>
@@ -69,21 +80,34 @@ export default async function HomePage() {
           </div>
         </header>
 
-        <Card className="border-arena-primary/25">
+        <Card
+          className={cn(
+            "overflow-hidden border-2 bg-gradient-to-b to-transparent",
+            luxury.border,
+            luxury.headerGradient,
+            luxury.level >= 3 && "arena-glow-pulse",
+            luxury.level >= 4 && "arena-shimmer",
+          )}
+          style={luxuryStyle}
+        >
           <CardContent className="flex flex-col gap-3 py-4">
             <div className="flex items-center gap-3">
               <PlayerAvatar
                 displayName={profile.displayName}
                 avatarIconId={profile.selectedAvatarIconId}
                 photoUrl={profile.customAvatarUrl}
-                className="h-14 w-14 text-lg"
+                className={cn("h-14 w-14 text-lg", luxury.avatarBorder)}
               />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-base font-bold text-arena-white">{profile.displayName}</p>
-                <Badge variant="primary" className="mt-1 gap-1">
-                  <LeagueBadgeIcon themeKey={profile.league.current.themeKey} />
-                  {profile.league.current.displayName}
-                </Badge>
+                <div className="mt-1 flex flex-wrap items-center gap-1">
+                  <Badge className={cn("gap-1", luxury.badgeClass)}>
+                    {luxury.level >= 4 && <Crown className="h-3 w-3" />}
+                    <LeagueBadgeIcon themeKey={profile.league.current.themeKey} />
+                    {profile.league.current.displayName}
+                  </Badge>
+                  <Badge variant="gold">{title.name}</Badge>
+                </div>
               </div>
               <div className="text-right">
                 <p className="flex items-center justify-end gap-1 text-lg font-bold tabular-nums text-arena-gold">

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/infrastructure/auth/auth";
-import { getMyAchievements, getMyGameStats, getMyProfile } from "@/features/profiles/profile.service";
+import { getMyAchievementCatalog, getMyGameStats, getMyProfile } from "@/features/profiles/profile.service";
 import { getMyWinRateTrend } from "@/features/profiles/match-history.service";
 import { listLeaguesWithUnlockStatus } from "@/features/leagues/league.service";
 import { AppScreen } from "@/components/layout/app-screen";
@@ -11,7 +11,8 @@ import { PlayerAvatar } from "@/components/common/player-avatar";
 import { WinRateTrendChart } from "@/components/common/win-rate-trend-chart";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Coins, Compass, Crown, Eye, Flame, Gem, Pencil, Settings, Shield, ShoppingBag, Skull, Sparkles, Star, Target, Trophy, Users, Zap } from "lucide-react";
+import { ProgressBar } from "@/components/ui/progress-bar";
+import { BookOpen, Coins, Compass, Crown, Eye, Flame, Gem, HelpCircle, Lock, Pencil, Settings, Shield, ShoppingBag, Skull, Sparkles, Star, Target, Trophy, Users, Zap } from "lucide-react";
 import { TITLES } from "@/config/titles";
 import { BACKGROUND_GRADIENTS, BADGE_ICON_KEYS } from "@/config/shop-items";
 import { LeagueBadgeIcon } from "@/components/common/league-badge-icon";
@@ -43,10 +44,11 @@ export default async function ProfilePage() {
   const profile = await getMyProfile(session.user.id);
   const [gameStats, achievements, leagues, winRateTrend] = await Promise.all([
     getMyGameStats(session.user.id),
-    getMyAchievements(session.user.id),
+    getMyAchievementCatalog(session.user.id),
     listLeaguesWithUnlockStatus(profile.totalPoints),
     getMyWinRateTrend(session.user.id),
   ]);
+  const unlockedAchievementCount = achievements.filter((a) => a.unlocked).length;
 
   const title = TITLES.find((t) => t.id === profile.selectedTitleId) ?? TITLES[0];
   const trophyByLeague = new Map(profile.trophies.map((t) => [t.leagueId, t]));
@@ -206,21 +208,49 @@ export default async function ProfilePage() {
         </section>
 
         <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-arena-silver">獲得実績</h2>
-          {achievements.length === 0 ? (
-            <EmptyState icon={Trophy} title="まだ実績がありません" description="対戦を重ねて実績を解放しよう。" />
-          ) : (
-            <div className="grid grid-cols-2 gap-2">
-              {achievements.map((entry) => (
-                <Card key={entry.id}>
-                  <CardContent className="py-3">
-                    <p className="text-sm font-semibold text-arena-white">{entry.achievement.name}</p>
-                    <p className="mt-0.5 text-[11px] text-arena-silver">{entry.achievement.description}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-arena-silver">実績</h2>
+            <span className="text-[11px] tabular-nums text-arena-silver/50">
+              {unlockedAchievementCount}/{achievements.length}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {achievements.map((entry) => (
+              <Card key={entry.code} className={cn(!entry.unlocked && "opacity-70")}>
+                <CardContent className="py-3">
+                  {entry.hidden ? (
+                    <div className="flex flex-col items-center gap-1 py-1.5 text-center">
+                      <HelpCircle className="h-4 w-4 text-arena-silver/40" />
+                      <p className="text-xs font-semibold text-arena-silver/50">？？？</p>
+                      <p className="text-[10px] text-arena-silver/35">隠し実績</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-1.5">
+                        {entry.unlocked ? (
+                          <Trophy className="h-3.5 w-3.5 shrink-0 text-arena-gold" />
+                        ) : (
+                          <Lock className="h-3.5 w-3.5 shrink-0 text-arena-silver/40" />
+                        )}
+                        <p className={cn("truncate text-sm font-semibold", entry.unlocked ? "text-arena-white" : "text-arena-silver/60")}>
+                          {entry.name}
+                        </p>
+                      </div>
+                      <p className="mt-0.5 line-clamp-2 text-[11px] text-arena-silver/60">{entry.description}</p>
+                      {!entry.unlocked && entry.progress !== null && entry.target !== null && (
+                        <div className="mt-1.5">
+                          <ProgressBar value={(entry.progress / entry.target) * 100} className="h-1" />
+                          <p className="mt-0.5 text-[10px] tabular-nums text-arena-silver/40">
+                            {entry.progress}/{entry.target}
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </section>
       </div>
     </AppScreen>

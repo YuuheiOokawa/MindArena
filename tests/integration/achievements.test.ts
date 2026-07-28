@@ -6,6 +6,7 @@ import { listIncomingFriendRequests } from "@/features/friends/friend.service";
 import { sendChallenge, acceptChallenge, listIncomingChallenges } from "@/features/friends/challenge.service";
 import { finalizeMatchResult } from "@/features/tournaments/progress.service";
 import { consumeUnseenAchievements } from "@/features/achievements/notify.service";
+import { getMyAchievementCatalog } from "@/features/profiles/profile.service";
 
 /**
  * Integration tests proving achievements actually unlock end-to-end: the Achievement/
@@ -114,5 +115,64 @@ describe("achievements unlock on match completion and are announced once", () =>
 
     const nowNotified = await prisma.playerAchievement.findMany({ where: { playerProfileId: kai.profileId } });
     expect(nowNotified.every((u) => u.notifiedAt !== null)).toBe(true);
+  });
+});
+
+describe("achievement catalog conceals locked hidden achievements", () => {
+  it("hides name/description/progress for a locked hidden achievement but reveals ordinary locked ones", async () => {
+    const mira = await makeUser("mira");
+    const catalog = await getMyAchievementCatalog(mira.userId);
+
+    const hiddenEntry = catalog.find((a) => a.code === "FLAWLESS_RECORD")!;
+    expect(hiddenEntry.hidden).toBe(true);
+    expect(hiddenEntry.unlocked).toBe(false);
+    expect(hiddenEntry.name).toBeNull();
+    expect(hiddenEntry.description).toBeNull();
+    expect(hiddenEntry.progress).toBeNull();
+    expect(hiddenEntry.target).toBeNull();
+
+    const visibleLockedEntry = catalog.find((a) => a.code === "FIRST_WIN")!;
+    expect(visibleLockedEntry.hidden).toBe(false);
+    expect(visibleLockedEntry.unlocked).toBe(false);
+    expect(visibleLockedEntry.name).toBe("初勝利");
+    expect(visibleLockedEntry.progress).toBe(0);
+    expect(visibleLockedEntry.target).toBe(1);
+  });
+
+  it("reveals a hidden achievement's real details once its condition is actually met and unlocked", async () => {
+    const nia = await makeUser("nia");
+    const owen = await makeUser("owen");
+    await befriend(nia.userId, username("owen"), owen.userId);
+
+    await sendChallenge(nia.userId, owen.profileId);
+    const incoming = await listIncomingChallenges(owen.userId);
+    const { tournamentId } = await acceptChallenge(owen.userId, incoming[0].challengeId);
+    createdTournamentIds.push(tournamentId);
+
+    const match = await prisma.tournamentMatch.findFirstOrThrow({ where: { tournamentId } });
+    const [p1, p2] = await Promise.all([
+      prisma.tournamentParticipant.findUniqueOrThrow({ where: { id: match.player1ParticipantId! } }),
+      prisma.tournamentParticipant.findUniqueOrThrow({ where: { id: match.player2ParticipantId! } }),
+    ]);
+    const niaParticipant = [p1, p2].find((p) => p.playerId === nia.profileId)!;
+    const owenParticipant = [p1, p2].find((p) => p.playerId === owen.profileId)!;
+
+    // Directly award the WIN_STREAK_10 condition rather than actually playing 10 matches.
+    await prisma.playerProfile.update({ where: { id: nia.profileId }, data: { bestWinStreak: 10 } });
+
+    await finalizeMatchResult(
+      match.id,
+      { gameId: "trust-or-betray", sessionId: match.id, winnerParticipantId: niaParticipant.id, loserParticipantId: owenParticipant.id, isDraw: false, finalScores: {}, rounds: [] },
+      0,
+      0,
+    );
+
+    const catalog = await getMyAchievementCatalog(nia.userId);
+    const streakEntry = catalog.find((a) => a.code === "WIN_STREAK_10")!;
+    expect(streakEntry.hidden).toBe(false);
+    expect(streakEntry.unlocked).toBe(true);
+    expect(streakEntry.name).toBe("常勝街道");
+    expect(streakEntry.progress).toBe(10);
+    expect(streakEntry.target).toBe(10);
   });
 });

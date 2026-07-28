@@ -36,6 +36,31 @@ function isAchievementConditionMet(achievement: AchievementConfig, stats: Achiev
   }
 }
 
+/** Raw progress value for an achievement's conditionType, in the same unit as conditionValue —
+ * used to render a locked-but-visible achievement's progress bar on the catalog screen. */
+export function getAchievementProgress(achievement: AchievementConfig, stats: AchievementCheckStats): number {
+  switch (achievement.conditionType) {
+    case "TOTAL_MATCHES":
+      return stats.totalMatches;
+    case "TOTAL_WINS":
+      return stats.totalWins;
+    case "WIN_STREAK":
+      return stats.bestWinStreak;
+    case "FINALS_REACHED":
+      return stats.finalsReached;
+    case "TOURNAMENT_WINS":
+      return stats.tournamentWins;
+    case "TOURNAMENT_ENTRIES":
+      return stats.tournamentEntries;
+    case "ALL_GAMES_PLAYED":
+      return stats.distinctGamesPlayed;
+    case "WIN_RATE_MIN_10_MATCHES":
+      return stats.totalMatches >= 10 ? Math.floor((stats.totalWins / stats.totalMatches) * 100) : 0;
+    case "LEAGUE_REACHED":
+      return stats.totalPoints;
+  }
+}
+
 /** Achievements whose condition is now met but aren't in `alreadyUnlockedCodes` yet. */
 export function findNewlyMetAchievements(
   achievements: AchievementConfig[],

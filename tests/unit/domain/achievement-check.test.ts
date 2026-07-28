@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findNewlyMetAchievements, type AchievementCheckStats } from "@/domain/services/achievement-check.service";
+import { findNewlyMetAchievements, getAchievementProgress, type AchievementCheckStats } from "@/domain/services/achievement-check.service";
 import type { AchievementConfig } from "@/config/achievements";
 
 const BASE_STATS: AchievementCheckStats = {
@@ -65,5 +65,30 @@ describe("findNewlyMetAchievements", () => {
 
     const enoughMatchesLowRate = findNewlyMetAchievements([a], new Set(), { ...BASE_STATS, totalMatches: 10, totalWins: 5 });
     expect(enoughMatchesLowRate).toEqual([]);
+  });
+});
+
+describe("getAchievementProgress", () => {
+  it("reads the matching stat for every conditionType", () => {
+    const cases: Array<[AchievementConfig["conditionType"], Partial<AchievementCheckStats>, number]> = [
+      ["TOTAL_MATCHES", { totalMatches: 7 }, 7],
+      ["TOTAL_WINS", { totalWins: 4 }, 4],
+      ["WIN_STREAK", { bestWinStreak: 6 }, 6],
+      ["FINALS_REACHED", { finalsReached: 2 }, 2],
+      ["TOURNAMENT_WINS", { tournamentWins: 3 }, 3],
+      ["TOURNAMENT_ENTRIES", { tournamentEntries: 9 }, 9],
+      ["ALL_GAMES_PLAYED", { distinctGamesPlayed: 2 }, 2],
+      ["LEAGUE_REACHED", { totalPoints: 4200 }, 4200],
+    ];
+    for (const [conditionType, statOverride, expected] of cases) {
+      const a = achievement({ conditionType, conditionValue: 999 });
+      expect(getAchievementProgress(a, { ...BASE_STATS, ...statOverride }), conditionType).toBe(expected);
+    }
+  });
+
+  it("reads WIN_RATE_MIN_10_MATCHES as 0 below the 10-match floor, otherwise as the win percentage", () => {
+    const a = achievement({ conditionType: "WIN_RATE_MIN_10_MATCHES", conditionValue: 100 });
+    expect(getAchievementProgress(a, { ...BASE_STATS, totalMatches: 3, totalWins: 3 })).toBe(0);
+    expect(getAchievementProgress(a, { ...BASE_STATS, totalMatches: 10, totalWins: 7 })).toBe(70);
   });
 });

@@ -2,14 +2,17 @@ import { playerProfileRepository } from "@/infrastructure/repositories/player-pr
 import { leagueRepository } from "@/infrastructure/repositories/league.repository";
 import { leagueTrophyRepository } from "@/infrastructure/repositories/league-trophy.repository";
 import { cosmeticItemRepository } from "@/infrastructure/repositories/cosmetic-item.repository";
+import { playerGameStatsRepository } from "@/infrastructure/repositories/player-game-stats.repository";
 import { getLeagueProgress } from "@/domain/services/league-progress.service";
 import { resolveFrameTier, resolveNextFrameTier } from "@/domain/services/profile-decoration.service";
 import { getUnlockedTitleIds } from "@/domain/services/title-unlock.service";
 import { calculateWinRate } from "@/domain/services/win-rate.util";
+import { getAchievementProgress, type AchievementCheckStats } from "@/domain/services/achievement-check.service";
 import { computeTitleUnlockStats } from "./title-unlock-stats";
 import { getPurchasedTitleIds } from "./purchased-titles";
 import { FRAME_TIERS } from "@/config/frames";
 import { TITLES } from "@/config/titles";
+import { ACHIEVEMENTS } from "@/config/achievements";
 import { AppError } from "@/lib/errors/app-error";
 
 export async function getMyProfile(userId: string) {
@@ -94,10 +97,47 @@ export async function getMyGameStats(userId: string) {
   }));
 }
 
-export async function getMyAchievements(userId: string) {
+/** Full achievement catalog (locked + unlocked) for the profile screen. Locked entries marked
+ * `hidden` in config come back with name/description/progress stripped so the secret stays a
+ * secret until the player actually earns it — see domain/services/achievement-check.service.ts. */
+export async function getMyAchievementCatalog(userId: string) {
   const profile = await playerProfileRepository.findByUserId(userId);
   if (!profile) throw new AppError("NOT_FOUND", "プロフィールが見つかりません。");
-  return playerProfileRepository.listAchievements(profile.id);
+
+  const [unlockedRows, distinctGamesPlayed] = await Promise.all([
+    playerProfileRepository.listAchievements(profile.id),
+    playerGameStatsRepository.countDistinctGamesPlayed(profile.id),
+  ]);
+  const unlockedByCode = new Map(unlockedRows.map((row) => [row.achievement.code, row]));
+
+  const stats: AchievementCheckStats = {
+    totalMatches: profile.totalMatches,
+    totalWins: profile.totalWins,
+    bestWinStreak: profile.bestWinStreak,
+    finalsReached: profile.finalsReached,
+    tournamentWins: profile.tournamentWins,
+    tournamentEntries: profile.tournamentEntries,
+    totalPoints: profile.totalPoints,
+    distinctGamesPlayed,
+  };
+
+  return ACHIEVEMENTS.map((config) => {
+    const unlockedRow = unlockedByCode.get(config.code);
+    const unlocked = Boolean(unlockedRow);
+    const isSecret = Boolean(config.hidden) && !unlocked;
+
+    return {
+      code: config.code,
+      hidden: isSecret,
+      unlocked,
+      unlockedAt: unlockedRow?.unlockedAt ?? null,
+      name: isSecret ? null : config.name,
+      description: isSecret ? null : config.description,
+      rewardPoints: isSecret ? null : config.rewardPoints,
+      progress: isSecret ? null : Math.min(getAchievementProgress(config, stats), config.conditionValue),
+      target: isSecret ? null : config.conditionValue,
+    };
+  });
 }
 
 export async function getMyPointHistory(userId: string, cursor?: string) {
