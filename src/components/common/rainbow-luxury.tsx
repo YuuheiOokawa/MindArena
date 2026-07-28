@@ -1,4 +1,3 @@
-import { Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 /**
@@ -31,30 +30,5 @@ export function RainbowLuxuryFrame({
       )}
       {children}
     </div>
-  );
-}
-
-const SPARKLE_POSITIONS = [
-  { top: "8%", left: "10%", delay: "0s" },
-  { top: "18%", left: "88%", delay: "0.5s" },
-  { top: "68%", left: "94%", delay: "1s" },
-  { top: "88%", left: "18%", delay: "1.5s" },
-  { top: "45%", left: "48%", delay: "2s" },
-];
-
-/** A handful of twinkling sparkles overlaid on a `relative` ancestor — pair with
- * RainbowLuxuryFrame for the full Mind King card treatment. */
-export function RainbowSparkles() {
-  return (
-    <>
-      {SPARKLE_POSITIONS.map((pos, i) => (
-        <Sparkles
-          key={i}
-          aria-hidden
-          className="arena-sparkle-piece pointer-events-none h-4 w-4"
-          style={{ top: pos.top, left: pos.left, animationDelay: pos.delay }}
-        />
-      ))}
-    </>
   );
 }

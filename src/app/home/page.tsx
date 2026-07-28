@@ -33,10 +33,7 @@ import { PlayerAvatar } from "@/components/common/player-avatar";
 import { LeagueBadgeIcon } from "@/components/common/league-badge-icon";
 import { DailyBonusCard } from "@/components/home/daily-bonus-card";
 import { DailyMissionsCard } from "@/components/home/daily-missions-card";
-import {
-  RainbowLuxuryFrame,
-  RainbowSparkles,
-} from "@/components/common/rainbow-luxury";
+import { RainbowLuxuryFrame } from "@/components/common/rainbow-luxury";
 import { ANNOUNCEMENTS } from "@/config/announcements";
 import { TITLES } from "@/config/titles";
 import { getLeagueLuxury } from "@/config/league-visuals";
@@ -142,7 +139,6 @@ export default async function HomePage() {
             )}
             style={luxuryStyle}
           >
-            {luxury.rainbow && <RainbowSparkles />}
             <CardContent className="flex flex-col gap-3 py-4">
               <div className="flex items-start gap-3">
                 <div className="relative shrink-0">

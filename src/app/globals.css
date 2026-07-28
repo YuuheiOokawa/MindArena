@@ -218,10 +218,10 @@ body {
 
 /* Mind King exclusive presentation (source: user request — the single top league should read as
    visibly iridescent, not just a brighter gold). A spinning rainbow ring replaces the shared
-   gradient border, a blurred rainbow halo glows behind the card, and a few sparkles twinkle over
-   it. See components/common/rainbow-luxury.tsx for the wrapper that applies these classes.
-   `@property` gives the conic-gradient a smoothly interpolating angle; browsers without support
-   just see a static (still colorful) ring instead of a spin — a harmless degrade. */
+   gradient border, and a blurred rainbow halo glows behind the card. See
+   components/common/rainbow-luxury.tsx for the wrapper that applies these classes. `@property`
+   gives the conic-gradient a smoothly interpolating angle; browsers without support just see a
+   static (still colorful) ring instead of a spin — a harmless degrade. */
 @property --arena-rainbow-angle {
   syntax: "<angle>";
   inherits: false;
@@ -270,25 +270,6 @@ body {
   animation: arena-rainbow-spin 4s linear infinite;
 }
 
-@keyframes arena-twinkle {
-  0%,
-  100% {
-    opacity: 0;
-    transform: scale(0.4) rotate(0deg);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1) rotate(20deg);
-  }
-}
-.arena-sparkle-piece {
-  position: absolute;
-  color: #fff;
-  opacity: 0;
-  animation: arena-twinkle 2.2s ease-in-out infinite;
-  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.8));
-}
-
 /* Same overrides as the OS-level media query below, applied instead when the player has turned
    on "演出軽減" in-app (PlayerProfile.reducedMotion) — the OS preference isn't always available
    or wanted independently of this app's own setting (see PreferencesProvider, which toggles this
@@ -300,8 +281,7 @@ body.arena-reduced-motion .arena-rise-in,
 body.arena-reduced-motion .arena-confetti-piece,
 body.arena-reduced-motion .arena-shimmer::after,
 body.arena-reduced-motion .arena-rainbow-ring,
-body.arena-reduced-motion .arena-rainbow-halo,
-body.arena-reduced-motion .arena-sparkle-piece {
+body.arena-reduced-motion .arena-rainbow-halo {
   animation-duration: 0.01ms !important;
   animation-iteration-count: 1 !important;
 }
@@ -314,8 +294,7 @@ body.arena-reduced-motion .arena-sparkle-piece {
   .arena-confetti-piece,
   .arena-shimmer::after,
   .arena-rainbow-ring,
-  .arena-rainbow-halo,
-  .arena-sparkle-piece {
+  .arena-rainbow-halo {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }

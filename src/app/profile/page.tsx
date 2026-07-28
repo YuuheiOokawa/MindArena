@@ -41,10 +41,7 @@ import {
 import { TITLES } from "@/config/titles";
 import { BACKGROUND_GRADIENTS, BADGE_ICON_KEYS } from "@/config/shop-items";
 import { LeagueBadgeIcon } from "@/components/common/league-badge-icon";
-import {
-  RainbowLuxuryFrame,
-  RainbowSparkles,
-} from "@/components/common/rainbow-luxury";
+import { RainbowLuxuryFrame } from "@/components/common/rainbow-luxury";
 import { getLeagueLuxury } from "@/config/league-visuals";
 import { cn } from "@/lib/utils/cn";
 import type { LucideIcon } from "lucide-react";
@@ -159,7 +156,6 @@ export default async function ProfilePage() {
             )}
             style={luxuryStyle}
           >
-            {luxury.rainbow && <RainbowSparkles />}
             <CardContent className="flex flex-col items-center gap-2 py-6 text-center">
               <div className="relative">
                 <RainbowLuxuryFrame
