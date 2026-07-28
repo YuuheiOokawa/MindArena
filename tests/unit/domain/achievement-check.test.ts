@@ -11,6 +11,8 @@ const BASE_STATS: AchievementCheckStats = {
   tournamentEntries: 0,
   totalPoints: 0,
   distinctGamesPlayed: 0,
+  loginBonusStreak: 0,
+  lifetimePrizeCurrency: 0,
 };
 
 function achievement(overrides: Partial<AchievementConfig>): AchievementConfig {
@@ -45,6 +47,8 @@ describe("findNewlyMetAchievements", () => {
       ["TOURNAMENT_ENTRIES", { tournamentEntries: 10 }, 10],
       ["ALL_GAMES_PLAYED", { distinctGamesPlayed: 4 }, 4],
       ["LEAGUE_REACHED", { totalPoints: 7000 }, 7000],
+      ["LOGIN_STREAK", { loginBonusStreak: 7 }, 7],
+      ["LIFETIME_PRIZE_EARNED", { lifetimePrizeCurrency: 1000 }, 1000],
     ];
     for (const [conditionType, statOverride, conditionValue] of cases) {
       const a = achievement({ code: conditionType, conditionType, conditionValue });
@@ -79,6 +83,8 @@ describe("getAchievementProgress", () => {
       ["TOURNAMENT_ENTRIES", { tournamentEntries: 9 }, 9],
       ["ALL_GAMES_PLAYED", { distinctGamesPlayed: 2 }, 2],
       ["LEAGUE_REACHED", { totalPoints: 4200 }, 4200],
+      ["LOGIN_STREAK", { loginBonusStreak: 5 }, 5],
+      ["LIFETIME_PRIZE_EARNED", { lifetimePrizeCurrency: 3000 }, 3000],
     ];
     for (const [conditionType, statOverride, expected] of cases) {
       const a = achievement({ conditionType, conditionValue: 999 });

@@ -11,6 +11,8 @@ export interface AchievementCheckStats {
   tournamentEntries: number;
   totalPoints: number;
   distinctGamesPlayed: number;
+  loginBonusStreak: number;
+  lifetimePrizeCurrency: number;
 }
 
 function isAchievementConditionMet(achievement: AchievementConfig, stats: AchievementCheckStats): boolean {
@@ -33,6 +35,10 @@ function isAchievementConditionMet(achievement: AchievementConfig, stats: Achiev
       return stats.totalMatches >= 10 && (stats.totalWins / stats.totalMatches) * 100 >= achievement.conditionValue;
     case "LEAGUE_REACHED":
       return stats.totalPoints >= achievement.conditionValue;
+    case "LOGIN_STREAK":
+      return stats.loginBonusStreak >= achievement.conditionValue;
+    case "LIFETIME_PRIZE_EARNED":
+      return stats.lifetimePrizeCurrency >= achievement.conditionValue;
   }
 }
 
@@ -58,6 +64,10 @@ export function getAchievementProgress(achievement: AchievementConfig, stats: Ac
       return stats.totalMatches >= 10 ? Math.floor((stats.totalWins / stats.totalMatches) * 100) : 0;
     case "LEAGUE_REACHED":
       return stats.totalPoints;
+    case "LOGIN_STREAK":
+      return stats.loginBonusStreak;
+    case "LIFETIME_PRIZE_EARNED":
+      return stats.lifetimePrizeCurrency;
   }
 }
 

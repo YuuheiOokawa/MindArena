@@ -176,3 +176,42 @@ describe("achievement catalog conceals locked hidden achievements", () => {
     expect(streakEntry.target).toBe(10);
   });
 });
+
+describe("achievements driven by profile fields not touched elsewhere in this suite", () => {
+  it("unlocks LOGIN_STREAK_3 and PRIZE_1000 once their underlying profile fields cross the threshold", async () => {
+    const priya = await makeUser("priya");
+    const sam = await makeUser("sam");
+    await befriend(priya.userId, username("sam"), sam.userId);
+
+    await sendChallenge(priya.userId, sam.profileId);
+    const incoming = await listIncomingChallenges(sam.userId);
+    const { tournamentId } = await acceptChallenge(sam.userId, incoming[0].challengeId);
+    createdTournamentIds.push(tournamentId);
+
+    const match = await prisma.tournamentMatch.findFirstOrThrow({ where: { tournamentId } });
+    const [p1, p2] = await Promise.all([
+      prisma.tournamentParticipant.findUniqueOrThrow({ where: { id: match.player1ParticipantId! } }),
+      prisma.tournamentParticipant.findUniqueOrThrow({ where: { id: match.player2ParticipantId! } }),
+    ]);
+    const priyaParticipant = [p1, p2].find((p) => p.playerId === priya.profileId)!;
+    const samParticipant = [p1, p2].find((p) => p.playerId === sam.profileId)!;
+
+    await prisma.playerProfile.update({ where: { id: priya.profileId }, data: { loginBonusStreak: 3, lifetimePrizeCurrency: 1000 } });
+
+    await finalizeMatchResult(
+      match.id,
+      { gameId: "trust-or-betray", sessionId: match.id, winnerParticipantId: priyaParticipant.id, loserParticipantId: samParticipant.id, isDraw: false, finalScores: {}, rounds: [] },
+      0,
+      0,
+    );
+
+    const catalog = await getMyAchievementCatalog(priya.userId);
+    const loginEntry = catalog.find((a) => a.code === "LOGIN_STREAK_3")!;
+    expect(loginEntry.unlocked).toBe(true);
+    expect(loginEntry.progress).toBe(3);
+
+    const prizeEntry = catalog.find((a) => a.code === "PRIZE_1000")!;
+    expect(prizeEntry.unlocked).toBe(true);
+    expect(prizeEntry.progress).toBe(1000);
+  });
+});

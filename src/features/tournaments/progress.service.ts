@@ -389,6 +389,8 @@ async function checkAndUnlockAchievements(tx: Tx, playerProfileId: string, leagu
     tournamentEntries: profile.tournamentEntries,
     totalPoints: profile.totalPoints,
     distinctGamesPlayed,
+    loginBonusStreak: profile.loginBonusStreak,
+    lifetimePrizeCurrency: profile.lifetimePrizeCurrency,
   });
   if (newlyMet.length === 0) return;
 

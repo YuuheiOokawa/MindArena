@@ -127,6 +127,8 @@ export async function getMyAchievementCatalog(userId: string) {
     tournamentEntries: profile.tournamentEntries,
     totalPoints: profile.totalPoints,
     distinctGamesPlayed,
+    loginBonusStreak: profile.loginBonusStreak,
+    lifetimePrizeCurrency: profile.lifetimePrizeCurrency,
   };
 
   return ACHIEVEMENTS.map((config) => {
