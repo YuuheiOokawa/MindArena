@@ -11,7 +11,7 @@ export const LEAGUE_BADGE_COLOR: Record<string, string> = {
   emperor: "text-rose-400",
   legend: "text-orange-400",
   "mind-king": "text-arena-gold",
-  void: "text-red-500",
+  void: "text-violet-500",
 };
 
 export function getLeagueBadgeColor(themeKey: string): string {
@@ -30,6 +30,7 @@ export const LEAGUE_BADGE_ICON: Record<string, string> = {
   emperor: "/leagues/emperor.png",
   legend: "/leagues/legend.png",
   "mind-king": "/leagues/mind-king.png",
+  void: "/leagues/void.png",
 };
 
 export function getLeagueBadgeIcon(themeKey: string): string | null {
@@ -145,15 +146,16 @@ export const LEAGUE_LUXURY: Record<string, LeagueLuxuryTier> = {
     glowColor: "rgba(224, 178, 86, 0.65)",
     rainbow: true,
   },
-  // 裏リーグ — deliberately NOT rainbow: past the king's radiance, the void reads as an ominous
-  // blood-red darkness, visually apart from every public tier.
+  // 裏リーグ — deliberately NOT rainbow: past the king's radiance, the void reads as an abyssal
+  // violet-on-black darkness (matching the swirling-vortex badge artwork), visually apart from
+  // every public tier's brighter gem tones.
   void: {
     level: 4,
-    headerGradient: "from-red-900/40 via-black/30 to-transparent",
-    border: "border-red-600/70",
-    avatarBorder: "border-red-600",
-    badgeClass: "bg-red-900/30 text-red-400 border-red-600/50",
-    glowColor: "rgba(220, 38, 38, 0.6)",
+    headerGradient: "from-violet-950/50 via-black/40 to-transparent",
+    border: "border-violet-600/70",
+    avatarBorder: "border-violet-600",
+    badgeClass: "bg-violet-950/40 text-violet-400 border-violet-600/50",
+    glowColor: "rgba(124, 58, 237, 0.6)",
   },
 };
 

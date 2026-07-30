@@ -168,11 +168,9 @@ export default async function HomePage() {
                     {profile.displayName}
                   </p>
                   <div className="mt-1 flex flex-wrap items-center gap-1">
-                    <Badge className={cn("gap-1", luxury.badgeClass)}>
-                      {luxury.level >= 4 && <Crown className="h-3 w-3" />}
-                      <LeagueBadgeIcon
-                        themeKey={profile.league.current.themeKey}
-                      />
+                    <Badge className={cn("gap-1 whitespace-nowrap", luxury.badgeClass)}>
+                      {luxury.level >= 4 && <Crown className="h-3 w-3 shrink-0" />}
+                      <LeagueBadgeIcon themeKey={profile.league.current.themeKey} />
                       {profile.league.current.displayName}
                     </Badge>
                     <Badge variant="gold">{title.name}</Badge>
