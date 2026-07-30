@@ -1,5 +1,6 @@
 import { prisma } from "@/infrastructure/database/prisma";
 import { calculateWinRate } from "@/domain/services/win-rate.util";
+import { getBotPersonalityMeta } from "@/config/bots";
 import { getMyParticipantIdForMatch } from "./participant-lookup";
 import { AppError } from "@/lib/errors/app-error";
 
@@ -9,19 +10,46 @@ export async function getMatchPreview(userId: string, matchId: string) {
   const match = await prisma.tournamentMatch.findUniqueOrThrow({
     where: { id: matchId },
     include: {
-      player1: { include: { player: { include: { currentLeague: true, user: { select: { username: true } } } }, bot: true } },
-      player2: { include: { player: { include: { currentLeague: true, user: { select: { username: true } } } }, bot: true } },
+      player1: {
+        include: {
+          player: {
+            include: {
+              currentLeague: true,
+              user: { select: { username: true } },
+            },
+          },
+          bot: true,
+        },
+      },
+      player2: {
+        include: {
+          player: {
+            include: {
+              currentLeague: true,
+              user: { select: { username: true } },
+            },
+          },
+          bot: true,
+        },
+      },
       gameType: true,
       tournament: { include: { league: true } },
     },
   });
 
-  const me = match.player1?.id === myParticipantId ? match.player1 : match.player2;
-  const opponent = match.player1?.id === myParticipantId ? match.player2 : match.player1;
-  if (!opponent || !me) throw new AppError("MATCH_NOT_READY", "対戦相手がまだ決まっていません。");
+  const me =
+    match.player1?.id === myParticipantId ? match.player1 : match.player2;
+  const opponent =
+    match.player1?.id === myParticipantId ? match.player2 : match.player1;
+  if (!opponent || !me)
+    throw new AppError("MATCH_NOT_READY", "対戦相手がまだ決まっていません。");
 
-  const opponentWinRate = opponent.player ? calculateWinRate(opponent.player.totalWins, opponent.player.totalMatches) : null;
-  const myWinRate = me.player ? calculateWinRate(me.player.totalWins, me.player.totalMatches) : null;
+  const opponentWinRate = opponent.player
+    ? calculateWinRate(opponent.player.totalWins, opponent.player.totalMatches)
+    : null;
+  const myWinRate = me.player
+    ? calculateWinRate(me.player.totalWins, me.player.totalMatches)
+    : null;
 
   return {
     matchId: match.id,
@@ -53,6 +81,12 @@ export async function getMatchPreview(userId: string, matchId: string) {
       photoUrl: opponent.player?.customAvatarUrl ?? null,
       winRate: opponentWinRate,
       totalMatches: opponent.player?.totalMatches ?? null,
+      // The bot's play style, revealed pre-match (source: 心理戦 depth request — a visible style
+      // makes the opponent READABLE: a パターン型 can be tracked, a 相手分析型 punishes your own
+      // repeated habits, etc. Turning bot matches into reads instead of guesses).
+      botStyle: opponent.bot
+        ? getBotPersonalityMeta(opponent.bot.personality)
+        : null,
     },
   };
 }

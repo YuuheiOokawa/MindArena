@@ -6,7 +6,11 @@ import {
   getMyGameStats,
   getMyProfile,
 } from "@/features/profiles/profile.service";
-import { getMyWinRateTrend } from "@/features/profiles/match-history.service";
+import {
+  getMyMatchHistory,
+  getMyWinRateTrend,
+} from "@/features/profiles/match-history.service";
+import { getMyGlobalRank } from "@/features/leaderboard/leaderboard.service";
 import { listLeaguesWithUnlockStatus } from "@/features/leagues/league.service";
 import { AppScreen } from "@/components/layout/app-screen";
 import { StatTile } from "@/components/common/stat-tile";
@@ -87,12 +91,15 @@ export default async function ProfilePage() {
   if (!session?.user?.id) redirect("/login");
 
   const profile = await getMyProfile(session.user.id);
-  const [gameStats, achievements, leagues, winRateTrend] = await Promise.all([
-    getMyGameStats(session.user.id),
-    getMyAchievementCatalog(session.user.id),
-    listLeaguesWithUnlockStatus(profile.totalPoints),
-    getMyWinRateTrend(session.user.id),
-  ]);
+  const [gameStats, achievements, leagues, winRateTrend, recentMatches, rank] =
+    await Promise.all([
+      getMyGameStats(session.user.id),
+      getMyAchievementCatalog(session.user.id),
+      listLeaguesWithUnlockStatus(profile.totalPoints),
+      getMyWinRateTrend(session.user.id),
+      getMyMatchHistory(session.user.id, undefined, 10),
+      getMyGlobalRank(session.user.id),
+    ]);
   const unlockedAchievementCount = achievements.filter(
     (a) => a.unlocked,
   ).length;
@@ -107,6 +114,11 @@ export default async function ProfilePage() {
     ? BADGE_ICONS[BADGE_ICON_KEYS[profile.badge.assetKey]]
     : null;
   const luxury = getLeagueLuxury(profile.league.current.themeKey);
+  // 得意ゲーム: the best win rate among games with a meaningful sample (5+ matches).
+  const bestGameTypeId =
+    gameStats
+      .filter((stat) => stat.matches >= 5)
+      .sort((a, b) => b.winRate - a.winRate)[0]?.gameTypeId ?? null;
   const luxuryStyle = {
     ...(luxury.level >= 2 && !luxury.rainbow
       ? { boxShadow: `0 0 30px -10px ${luxury.glowColor}` }
@@ -216,6 +228,24 @@ export default async function ProfilePage() {
                   </p>
                 </div>
               </div>
+              {profile.highestLeague && (
+                <p className="mt-1 flex items-center gap-1 text-[11px] text-arena-silver/70">
+                  <Crown className="h-3 w-3 text-arena-gold" />
+                  最高到達リーグ:{" "}
+                  <span className="font-semibold text-arena-white">
+                    {profile.highestLeague.displayName}
+                  </span>
+                  {profile.highestLeague.reachedAt && (
+                    <span>
+                      （
+                      {new Date(
+                        profile.highestLeague.reachedAt,
+                      ).toLocaleDateString("ja-JP")}
+                      ）
+                    </span>
+                  )}
+                </p>
+              )}
             </CardContent>
           </Card>
         </RainbowLuxuryFrame>
@@ -267,17 +297,56 @@ export default async function ProfilePage() {
           </div>
         </section>
 
-        <div className="grid grid-cols-3 gap-2">
-          <StatTile label="総対戦数" value={profile.totalMatches} />
-          <StatTile label="総勝利数" value={profile.totalWins} />
-          <StatTile label="総敗北数" value={profile.totalLosses} />
-          <StatTile label="心理戦勝率" value={`${profile.winRate}%`} accent />
-          <StatTile label="最高連勝" value={profile.bestWinStreak} />
-          <StatTile label="現在連勝" value={profile.currentWinStreak} />
-          <StatTile label="大会参加数" value={profile.tournamentEntries} />
-          <StatTile label="優勝回数" value={profile.tournamentWins} />
-          <StatTile label="決勝進出数" value={profile.finalsReached} />
-        </div>
+        <section className="flex flex-col gap-2">
+          <h2 className="text-sm font-semibold text-arena-silver">戦歴</h2>
+          <div className="grid grid-cols-3 gap-2">
+            <StatTile label="総対戦数" value={profile.totalMatches} />
+            <StatTile label="総勝利数" value={profile.totalWins} />
+            <StatTile label="総敗北数" value={profile.totalLosses} />
+            <StatTile label="心理戦勝率" value={`${profile.winRate}%`} accent />
+            <StatTile label="最高連勝" value={profile.bestWinStreak} />
+            <StatTile label="現在連勝" value={profile.currentWinStreak} />
+            <StatTile label="大会参加数" value={profile.tournamentEntries} />
+            <StatTile label="優勝回数" value={profile.tournamentWins} />
+            <StatTile label="準優勝回数" value={profile.runnerUpCount} />
+            <StatTile label="決勝進出数" value={profile.finalsReached} />
+            <StatTile label="全体順位" value={`${rank.rank}位`} />
+            <StatTile
+              label="上位"
+              value={`${rank.percentile.toFixed(1)}%`}
+              accent
+            />
+          </div>
+
+          {recentMatches.length > 0 && (
+            <Card>
+              <CardContent className="py-3">
+                <p className="text-xs font-semibold text-arena-silver">
+                  直近{recentMatches.length}戦のフォーム
+                  <span className="ml-1.5 font-normal text-arena-silver/60">
+                    （右が最新）
+                  </span>
+                </p>
+                <div className="mt-2 flex items-center gap-1.5">
+                  {[...recentMatches].reverse().map((match) => (
+                    <span
+                      key={match.matchId}
+                      title={match.won ? "勝利" : "敗北"}
+                      className={cn(
+                        "flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold",
+                        match.won
+                          ? "bg-arena-success/20 text-arena-success"
+                          : "bg-arena-danger/20 text-arena-danger",
+                      )}
+                    >
+                      {match.won ? "W" : "L"}
+                    </span>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </section>
 
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold text-arena-silver">
@@ -298,8 +367,16 @@ export default async function ProfilePage() {
                 <Card key={stat.gameTypeId}>
                   <CardContent className="flex items-center justify-between py-3">
                     <div>
-                      <p className="text-sm font-medium text-arena-white">
+                      <p className="flex items-center gap-1.5 text-sm font-medium text-arena-white">
                         {stat.gameName}
+                        {bestGameTypeId === stat.gameTypeId && (
+                          <Badge
+                            variant="gold"
+                            className="px-1.5 py-0 text-[10px]"
+                          >
+                            得意
+                          </Badge>
+                        )}
                       </p>
                       <p className="text-xs text-arena-silver">
                         {stat.matches}戦 {stat.wins}勝{stat.losses}敗

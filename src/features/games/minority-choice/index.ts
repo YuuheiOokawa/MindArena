@@ -1,9 +1,14 @@
-import type { BotPlayer, GameContext, GameResult, PsychologicalGame } from "@/domain/interfaces/psychological-game";
+import type {
+  BotPlayer,
+  GameContext,
+  GameResult,
+  PsychologicalGame,
+} from "@/domain/interfaces/psychological-game";
 import { extendForSuddenDeath } from "@/domain/services/tiebreak";
 import { submitSimultaneousAction } from "@/features/games/core/simultaneous-round";
 import { resolveBotStrategy } from "@/features/bots/strategy-registry";
 import type { BotPersonality } from "@/domain/enums";
-import { computeMinorityScore, simulateCrowd } from "./scoring";
+import { computeMinorityScore, crowdPreview, simulateCrowd } from "./scoring";
 import type { MinorityChoiceAction, MinorityChoiceState } from "./types";
 
 const TOTAL_ROUNDS = 3;
@@ -25,7 +30,10 @@ function buildResult(state: MinorityChoiceState): GameResult {
   };
 }
 
-export const minorityChoiceGame: PsychologicalGame<MinorityChoiceState, MinorityChoiceAction> = {
+export const minorityChoiceGame: PsychologicalGame<
+  MinorityChoiceState,
+  MinorityChoiceAction
+> = {
   id: "minority-choice",
   name: "MINORITY CHOICE",
   description: "群衆の傾向を読み、少数派を選び続ける3ラウンドの心理戦。",
@@ -48,15 +56,20 @@ export const minorityChoiceGame: PsychologicalGame<MinorityChoiceState, Minority
       declarations: {},
       pendingActions: {},
       crowdByRound: {},
+      crowdPreviewByRound: {
+        1: crowdPreview(simulateCrowd(context.sessionId, 1)),
+      },
     };
   },
 
   handleAction(state, action) {
     if (state.status !== "IN_PROGRESS") return state;
-    if (action.round !== state.round) throw new Error("現在のラウンドと異なる行動です。");
+    if (action.round !== state.round)
+      throw new Error("現在のラウンドと異なる行動です。");
 
     if (action.actionType === "DECLARE") {
-      if (state.phase !== "DECLARE") throw new Error("宣言フェーズではありません。");
+      if (state.phase !== "DECLARE")
+        throw new Error("宣言フェーズではありません。");
       const { pendingActions, bothSubmitted } = submitSimultaneousAction(
         state.declarations,
         action,
@@ -70,7 +83,8 @@ export const minorityChoiceGame: PsychologicalGame<MinorityChoiceState, Minority
     }
 
     // CHOOSE — the final, locked-in pick. May or may not match the round's declaration.
-    if (state.phase !== "CHOOSE") throw new Error("選択フェーズではありません。");
+    if (state.phase !== "CHOOSE")
+      throw new Error("選択フェーズではありません。");
     const { pendingActions, bothSubmitted } = submitSimultaneousAction(
       state.pendingActions,
       action,
@@ -97,12 +111,28 @@ export const minorityChoiceGame: PsychologicalGame<MinorityChoiceState, Minority
       round: nextRound,
       status: isFinalRound ? "COMPLETE" : "IN_PROGRESS",
       phase: "DECLARE",
-      scores: { [idA]: state.scores[idA] + scoreA, [idB]: state.scores[idB] + scoreB },
+      scores: {
+        [idA]: state.scores[idA] + scoreA,
+        [idB]: state.scores[idB] + scoreB,
+      },
       history: [
         ...state.history,
-        { round: state.round, actions: pendingActions, declarations: state.declarations, outcome: { [idA]: scoreA, [idB]: scoreB } },
+        {
+          round: state.round,
+          actions: pendingActions,
+          declarations: state.declarations,
+          outcome: { [idA]: scoreA, [idB]: scoreB },
+        },
       ],
       crowdByRound: { ...state.crowdByRound, [state.round]: crowd },
+      crowdPreviewByRound: isFinalRound
+        ? state.crowdPreviewByRound
+        : {
+            ...state.crowdPreviewByRound,
+            [nextRound]: crowdPreview(
+              simulateCrowd(state.sessionId, nextRound),
+            ),
+          },
       declarations: {},
       pendingActions: {},
     };
@@ -113,7 +143,10 @@ export const minorityChoiceGame: PsychologicalGame<MinorityChoiceState, Minority
   },
 
   createBotAction(state, bot: BotPlayer) {
-    const strategy = resolveBotStrategy("minority-choice", bot.personality as BotPersonality);
+    const strategy = resolveBotStrategy(
+      "minority-choice",
+      bot.personality as BotPersonality,
+    );
     return strategy(state, bot, Math.random) as MinorityChoiceAction;
   },
 
@@ -126,6 +159,19 @@ export const minorityChoiceGame: PsychologicalGame<MinorityChoiceState, Minority
 
   resolveTiebreak(state) {
     const result = buildResult(state);
-    return result.isDraw ? extendForSuddenDeath(state) : state;
+    if (!result.isDraw) return state;
+    const extended = extendForSuddenDeath(state);
+    if (extended === state) return state;
+    // The sudden-death round starts without a crowd preview (the regular final round's advance
+    // skipped it) — publish it here so the extra round plays with the same information.
+    return {
+      ...extended,
+      crowdPreviewByRound: {
+        ...extended.crowdPreviewByRound,
+        [extended.round]: crowdPreview(
+          simulateCrowd(extended.sessionId, extended.round),
+        ),
+      },
+    };
   },
 };

@@ -29,4 +29,10 @@ export const pointTransactionRepository = {
       ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
     });
   },
+
+  /** 準優勝回数 etc. — stats not tracked as PlayerProfile columns are derivable from the ledger,
+   * since every RUNNER_UP award writes exactly one transaction (progress.service.ts). */
+  async countByReason(playerProfileId: string, reason: PointReason) {
+    return prisma.pointTransaction.count({ where: { playerProfileId, reason } });
+  },
 };

@@ -14,7 +14,12 @@ export interface LeagueConfig {
   gameIds: string[];
 }
 
-const ALL_GAME_IDS = ["trust-or-betray", "number-bluff", "minority-choice", "final-prediction"];
+const ALL_GAME_IDS = [
+  "trust-or-betray",
+  "number-bluff",
+  "minority-choice",
+  "final-prediction",
+];
 
 /**
  * The 10 tournament leagues. This is master data: renaming, re-pricing, or reordering a
@@ -152,7 +157,36 @@ export const LEAGUES: LeagueConfig[] = [
     displayOrder: 10,
     gameIds: ALL_GAME_IDS,
   },
+  {
+    code: "VOID",
+    name: "VOID",
+    displayName: "裏リーグ・ヴォイド",
+    description:
+      "王座の先に口を開く、語られざる領域。ここでの敗北は、深く沈む。",
+    requiredPoints: 120000,
+    rewardMultiplier: 4.0,
+    botDifficulty: BotDifficulty.MASTER,
+    themeKey: "void",
+    frameKey: "mind-king",
+    displayOrder: 11,
+    gameIds: ALL_GAME_IDS,
+  },
 ];
+
+/** 裏リーグ: leagues that stay entirely invisible — league list, trophy case, lobby pickers —
+ * until the player has EARNED the reveal by reaching the summit of the public ladder. Point
+ * math (syncCurrentLeague, highest-league tracking) still sees them like any other league, so
+ * crossing the threshold promotes into a VOID whose existence was, until then, a rumor. */
+export const HIDDEN_LEAGUE_CODES = new Set<string>(["VOID"]);
+
+/** Hidden leagues reveal themselves once the player reaches MIND KING (the last public league). */
+export const HIDDEN_LEAGUE_REVEAL_POINTS = 75000;
+
+export function isLeagueVisible(code: string, totalPoints: number): boolean {
+  return (
+    !HIDDEN_LEAGUE_CODES.has(code) || totalPoints >= HIDDEN_LEAGUE_REVEAL_POINTS
+  );
+}
 
 export function getLeagueByCode(code: string): LeagueConfig | undefined {
   return LEAGUES.find((league) => league.code === code);

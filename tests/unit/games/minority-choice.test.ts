@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { computeMinorityScore, simulateCrowd } from "@/features/games/minority-choice/scoring";
+import { computeMinorityScore, crowdPreview, simulateCrowd } from "@/features/games/minority-choice/scoring";
+import { MINORITY_CHOICE_CROWD_REVEALED, MINORITY_CHOICE_CROWD_SIZE } from "@/config/games/minority-choice";
 
 describe("minority-choice computeMinorityScore", () => {
   it("awards the point to whoever picked the minority side", () => {
@@ -38,6 +39,38 @@ describe("minority-choice simulateCrowd", () => {
 
   it("sums to the configured crowd size", () => {
     const crowd = simulateCrowd("session-y", 2);
-    expect(crowd.aCount + crowd.bCount).toBe(20);
+    expect(crowd.aCount + crowd.bCount).toBe(MINORITY_CHOICE_CROWD_SIZE);
+  });
+
+  it("uses an odd crowd size so a round can never end with no minority side", () => {
+    // 21 crowd votes + 2 contestant votes = 23 (odd) — totals can never tie.
+    expect(MINORITY_CHOICE_CROWD_SIZE % 2).toBe(1);
+  });
+});
+
+describe("minority-choice crowdPreview", () => {
+  it("always publishes exactly the configured number of votes", () => {
+    for (let a = 0; a <= MINORITY_CHOICE_CROWD_SIZE; a++) {
+      const preview = crowdPreview({ aCount: a, bCount: MINORITY_CHOICE_CROWD_SIZE - a });
+      expect(preview.revealedA + preview.revealedB).toBe(MINORITY_CHOICE_CROWD_REVEALED);
+      expect(preview.hiddenCount).toBe(MINORITY_CHOICE_CROWD_SIZE - MINORITY_CHOICE_CROWD_REVEALED);
+    }
+  });
+
+  it("never lies: the hidden remainder can always account for the true totals", () => {
+    for (let a = 0; a <= MINORITY_CHOICE_CROWD_SIZE; a++) {
+      const crowd = { aCount: a, bCount: MINORITY_CHOICE_CROWD_SIZE - a };
+      const preview = crowdPreview(crowd);
+      const hiddenA = crowd.aCount - preview.revealedA;
+      const hiddenB = crowd.bCount - preview.revealedB;
+      expect(hiddenA).toBeGreaterThanOrEqual(0);
+      expect(hiddenB).toBeGreaterThanOrEqual(0);
+      expect(hiddenA + hiddenB).toBe(preview.hiddenCount);
+    }
+  });
+
+  it("is deterministic for a given crowd", () => {
+    const crowd = simulateCrowd("session-z", 1);
+    expect(crowdPreview(crowd)).toEqual(crowdPreview(crowd));
   });
 });

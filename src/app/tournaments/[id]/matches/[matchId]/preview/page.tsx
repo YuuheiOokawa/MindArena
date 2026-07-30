@@ -43,6 +43,7 @@ interface MatchPreview {
     photoUrl: string | null;
     winRate: number | null;
     totalMatches: number | null;
+    botStyle: { label: string; description: string } | null;
   };
 }
 
@@ -139,6 +140,15 @@ function PreMatchSession({ id, matchId }: { id: string; matchId: string }) {
           <div className="-mt-3 flex justify-center">
             <Badge variant="neutral">BOT対戦</Badge>
           </div>
+        )}
+
+        {preview.opponent.botStyle && (
+          <Card className="-mt-2 border-arena-gold/25 bg-arena-gold/5">
+            <CardContent className="py-3">
+              <p className="text-xs font-semibold text-arena-gold">相手のスタイル: {preview.opponent.botStyle.label}</p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-arena-silver">{preview.opponent.botStyle.description}</p>
+            </CardContent>
+          </Card>
         )}
 
         <div className="flex flex-col gap-2">

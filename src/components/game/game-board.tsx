@@ -35,6 +35,7 @@ export function GameBoard({ state, myId, opponentId, submitting, onSubmit }: Gam
           phase={state.phase}
           declarations={state.declarations}
           pendingActions={state.pendingActions}
+          crowdPreview={state.crowdPreviewByRound?.[state.round] ?? null}
           submitting={submitting}
           onDeclare={(choice) => onSubmit("DECLARE", { choice })}
           onChoose={(choice) => onSubmit("CHOOSE", { choice })}
