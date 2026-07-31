@@ -69,6 +69,8 @@ export enum PointReason {
   QUARTERFINAL_ELIMINATION = "QUARTERFINAL_ELIMINATION",
   ACHIEVEMENT_BONUS = "ACHIEVEMENT_BONUS",
   DAILY_BONUS = "DAILY_BONUS",
+  /** Manual claim of a 期間限定イベント milestone reward (config/events.ts). */
+  EVENT_MILESTONE = "EVENT_MILESTONE",
   ADMIN_ADJUSTMENT = "ADMIN_ADJUSTMENT",
 }
 
@@ -85,6 +87,7 @@ export const POINT_REASON_LABEL: Record<PointReason, string> = {
   [PointReason.QUARTERFINAL_ELIMINATION]: "準々決勝敗退",
   [PointReason.ACHIEVEMENT_BONUS]: "実績報酬",
   [PointReason.DAILY_BONUS]: "デイリーボーナス",
+  [PointReason.EVENT_MILESTONE]: "イベント報酬",
   [PointReason.ADMIN_ADJUSTMENT]: "運営による調整",
 };
 

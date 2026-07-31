@@ -6,10 +6,13 @@ import { gameTypeRepository } from "@/infrastructure/repositories/game-type.repo
 import { playerGameStatsRepository } from "@/infrastructure/repositories/player-game-stats.repository";
 import { gameSessionRepository } from "@/infrastructure/repositories/game-session.repository";
 import { achievementRepository } from "@/infrastructure/repositories/achievement.repository";
+import { eventRepository } from "@/infrastructure/repositories/event.repository";
+import { eventScoreRepository } from "@/infrastructure/repositories/event-score.repository";
 import { awardPoints } from "@/features/points/award-points.service";
 import { simulateBotVsBotMatch } from "@/features/games/core/simulate-bot-match";
 import { generateBracket, isFinalRound, pairNextRound } from "@/domain/services/bracket.service";
 import { findNewlyMetAchievements } from "@/domain/services/achievement-check.service";
+import { isEventActive } from "@/domain/services/event.service";
 import { toJstDateKey } from "@/domain/services/daily-bonus.service";
 import { hashStringToSeed } from "@/lib/utils/seeded-random";
 import { MatchStatus, ParticipantStatus, ParticipantType, PointReason, TournamentStatus } from "@/domain/enums";
@@ -234,6 +237,7 @@ export async function finalizeMatchResult(
       }
       await checkAndUnlockAchievements(tx, winner.playerId, league);
       await incrementDailyMissionCounters(tx, winner.playerId, true);
+      await incrementEventProgress(tx, winner.playerId);
     }
 
     if (loser.type === ParticipantType.HUMAN && loser.playerId) {
@@ -429,6 +433,22 @@ async function incrementDailyMissionCounters(tx: Tx, playerProfileId: string, wo
       dailyWins: won ? (isStale ? 1 : { increment: 1 }) : isStale ? 0 : undefined,
     },
   });
+}
+
+/** Credits one win toward every 期間限定イベント currently in its active window (winner-only —
+ * a "win challenge" event shouldn't credit the loser). Runs after the winner's stats/achievements
+ * are already updated, mirroring incrementDailyMissionCounters's placement. config/events.ts is
+ * the source of truth; eventRepository.findAllActive() is TTL-cached master data (event rows
+ * rarely change), so this filters to the currently-active ones in memory rather than querying by
+ * date directly. */
+async function incrementEventProgress(tx: Tx, playerProfileId: string) {
+  const events = await eventRepository.findAllActive();
+  const now = new Date();
+  const activeEvents = events.filter((event) => isEventActive(event, now));
+
+  for (const event of activeEvents) {
+    await eventScoreRepository.increment(tx, event.id, playerProfileId);
+  }
 }
 
 /** Once every match in a round is complete, pairs winners into the next round and auto-resolves any all-BOT matches there. */

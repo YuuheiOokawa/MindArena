@@ -12,6 +12,7 @@ import { TITLES } from "../src/config/titles";
 import { SHOP_ITEMS } from "../src/config/shop-items";
 import { ROOM_TYPES } from "../src/config/room-types";
 import { FURNITURE_ITEMS } from "../src/config/furniture";
+import { EVENTS } from "../src/config/events";
 import { APP_CONFIG } from "../src/config/app";
 import { calculateReward } from "../src/domain/services/points.service";
 import { PointReason } from "../src/domain/enums";
@@ -259,6 +260,54 @@ async function seedRoomsAndFurniture(leagueIds: Map<string, string>) {
   console.log(`Seeded ${ROOM_TYPES.length} room types and ${FURNITURE_ITEMS.length} furniture items.`);
 }
 
+async function seedEvents() {
+  for (const event of EVENTS) {
+    const row = await prisma.event.upsert({
+      where: { code: event.code },
+      update: {
+        name: event.name,
+        description: event.description,
+        themeKey: event.themeKey,
+        startAt: event.startAt,
+        endAt: event.endAt,
+        isActive: true,
+      },
+      create: {
+        code: event.code,
+        name: event.name,
+        description: event.description,
+        themeKey: event.themeKey,
+        startAt: event.startAt,
+        endAt: event.endAt,
+      },
+    });
+
+    for (const milestone of event.milestones) {
+      await prisma.eventMilestone.upsert({
+        where: { eventId_code: { eventId: row.id, code: milestone.code } },
+        update: {
+          name: milestone.name,
+          requiredScore: milestone.requiredScore,
+          rewardPoints: milestone.rewardPoints,
+          rewardPrizeCurrency: milestone.rewardPrizeCurrency,
+          sortOrder: milestone.sortOrder,
+        },
+        create: {
+          eventId: row.id,
+          code: milestone.code,
+          name: milestone.name,
+          requiredScore: milestone.requiredScore,
+          rewardPoints: milestone.rewardPoints,
+          rewardPrizeCurrency: milestone.rewardPrizeCurrency,
+          sortOrder: milestone.sortOrder,
+        },
+      });
+    }
+  }
+
+  console.log(`Seeded ${EVENTS.length} events.`);
+}
+
 async function seedDemoUser(entryLeagueId: string) {
   if (process.env.NODE_ENV === "production") {
     console.log("Skipping demo user (NODE_ENV=production).");
@@ -290,6 +339,7 @@ async function main() {
   await seedAchievements();
   await seedCosmetics();
   await seedRoomsAndFurniture(leagueIds);
+  await seedEvents();
 
   const entryLeagueCode = LEAGUES.find((l) => l.requiredPoints === 0)!.code;
   await seedDemoUser(leagueIds.get(entryLeagueCode)!);

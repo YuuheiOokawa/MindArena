@@ -22,6 +22,7 @@ export const BASE_POINT_REWARDS: Record<PointReason, number> = {
   [PointReason.QUARTERFINAL_ELIMINATION]: -6,
   [PointReason.ACHIEVEMENT_BONUS]: 0, // amount is supplied per-achievement, see config/achievements.ts
   [PointReason.DAILY_BONUS]: 0, // amount is supplied per-day-tier, see config/daily-bonus.ts
+  [PointReason.EVENT_MILESTONE]: 0, // amount is supplied per-milestone, see config/events.ts
   [PointReason.ADMIN_ADJUSTMENT]: 0, // amount is supplied by the admin action itself
 };
 

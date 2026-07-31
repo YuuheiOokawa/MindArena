@@ -30,6 +30,7 @@ import {
   Gem,
   HelpCircle,
   Lock,
+  PartyPopper,
   Pencil,
   Settings,
   Shield,
@@ -259,6 +260,7 @@ export default async function ProfilePage() {
             label="ランキング"
           />
           <ProfileLinkRow href="/shop" icon={ShoppingBag} label="ショップ" />
+          <ProfileLinkRow href="/events" icon={PartyPopper} label="期間限定イベント" />
           <ProfileLinkRow href="/friends" icon={Users} label="フレンド" />
           <ProfileLinkRow href="/how-to-play" icon={BookOpen} label="遊び方" />
         </div>

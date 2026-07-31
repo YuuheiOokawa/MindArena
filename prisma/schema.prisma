@@ -78,6 +78,7 @@ enum PointReason {
   QUARTERFINAL_ELIMINATION
   ACHIEVEMENT_BONUS
   DAILY_BONUS
+  EVENT_MILESTONE
   ADMIN_ADJUSTMENT
 }
 
@@ -207,6 +208,8 @@ model PlayerProfile {
   dailyMissionClaims        DailyMissionClaim[]
   room                      UserRoom?
   ownedFurniture            UserOwnedFurniture[]
+  eventScores               EventScore[]
+  eventMilestoneClaims      EventMilestoneClaim[]
 
   @@index([totalPoints])
   /** Covers the league-scoped leaderboard (features/leaderboard/leaderboard.service.ts's
@@ -802,4 +805,79 @@ model PlayerAchievement {
 
   @@unique([playerProfileId, achievementId])
   @@map("player_achievements")
+}
+
+// ---------------------------------------------------------------------------
+// 期間限定イベント (limited-time events) — config-driven master data (config/events.ts),
+// upserted by prisma/seed.ts like League/GameType/Achievement above. A player's score is win
+// count accumulated during [startAt, endAt] (see features/tournaments/progress.service.ts's
+// incrementEventProgress); milestone rewards are claimed manually, mirroring DailyMissionClaim's
+// tryClaim race-safe pattern rather than PlayerAchievement's auto-grant.
+// ---------------------------------------------------------------------------
+
+model Event {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String
+  themeKey    String
+  startAt     DateTime
+  endAt       DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  milestones EventMilestone[]
+  scores     EventScore[]
+
+  @@index([startAt, endAt])
+  @@map("events")
+}
+
+/** A win-count threshold within an event; reaching `requiredScore` makes the reward claimable. */
+model EventMilestone {
+  id                  String @id @default(cuid())
+  eventId             String
+  event               Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  code                String
+  name                String
+  requiredScore       Int
+  rewardPoints        Int    @default(0)
+  rewardPrizeCurrency Int    @default(0)
+  sortOrder           Int
+
+  claims EventMilestoneClaim[]
+
+  @@unique([eventId, code])
+  @@map("event_milestones")
+}
+
+/** One row per (event, player) — running win count for that event, also the source for the
+ * per-event leaderboard (score index below). */
+model EventScore {
+  id              String        @id @default(cuid())
+  eventId         String
+  event           Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  playerProfileId String
+  playerProfile   PlayerProfile @relation(fields: [playerProfileId], references: [id], onDelete: Cascade)
+  score           Int           @default(0)
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([eventId, playerProfileId])
+  @@index([eventId, score])
+  @@map("event_scores")
+}
+
+/** One row per milestone a player has claimed — the race-safety guard for claiming (see
+ * DailyMissionClaim above for the identical pattern). */
+model EventMilestoneClaim {
+  id               String         @id @default(cuid())
+  eventMilestoneId String
+  eventMilestone   EventMilestone @relation(fields: [eventMilestoneId], references: [id], onDelete: Cascade)
+  playerProfileId  String
+  playerProfile    PlayerProfile  @relation(fields: [playerProfileId], references: [id], onDelete: Cascade)
+  claimedAt        DateTime       @default(now())
+
+  @@unique([eventMilestoneId, playerProfileId])
+  @@map("event_milestone_claims")
 }

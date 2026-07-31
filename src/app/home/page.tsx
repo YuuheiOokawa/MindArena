@@ -33,6 +33,7 @@ import { PlayerAvatar } from "@/components/common/player-avatar";
 import { LeagueBadgeIcon } from "@/components/common/league-badge-icon";
 import { DailyBonusCard } from "@/components/home/daily-bonus-card";
 import { DailyMissionsCard } from "@/components/home/daily-missions-card";
+import { EventBanner } from "@/components/home/event-banner";
 import { RainbowLuxuryFrame } from "@/components/common/rainbow-luxury";
 import { ANNOUNCEMENTS } from "@/config/announcements";
 import { TITLES } from "@/config/titles";
@@ -280,6 +281,8 @@ export default async function HomePage() {
             <Sparkles className="h-3.5 w-3.5 opacity-80" />
           </Link>
         </Button>
+
+        <EventBanner />
 
         <DailyBonusCard />
 
