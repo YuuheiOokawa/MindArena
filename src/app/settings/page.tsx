@@ -56,7 +56,7 @@ export default function SettingsPage() {
                       <p className="text-sm font-medium text-arena-white">{item.label}</p>
                       <p className="text-xs text-arena-silver">{item.description}</p>
                     </div>
-                    <SwitchToggle checked={preferences[item.key]} onChange={() => toggle(item.key)} />
+                    <SwitchToggle checked={preferences[item.key]} onChange={() => toggle(item.key)} label={item.label} />
                   </CardContent>
                 </Card>
               ))}
@@ -200,11 +200,12 @@ function DeleteAccountSection() {
   );
 }
 
-function SwitchToggle({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+function SwitchToggle({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) {
   return (
     <button
       role="switch"
       aria-checked={checked}
+      aria-label={label}
       onClick={onChange}
       className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${checked ? "bg-arena-gold" : "bg-arena-surface-2 border border-arena-border"}`}
     >

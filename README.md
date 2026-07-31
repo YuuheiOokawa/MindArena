@@ -44,7 +44,8 @@ npm run dev
 
 | 変数 | 説明 |
 |---|---|
-| `DATABASE_URL` | PostgreSQL 接続文字列 |
+| `DATABASE_URL` | PostgreSQL 接続文字列。本番はNeonのpooled接続文字列(`-pooler`)を使うこと |
+| `DATABASE_POOL_MAX` | (任意) 1プロセスあたりのDB接続プール上限。デフォルト5(サーバーレス想定) |
 | `AUTH_SECRET` | Auth.js のセッション署名用シークレット（`npx auth secret` で生成可能） |
 | `NEXTAUTH_URL` | アプリのベースURL（本番デプロイ時は実URLに変更） |
 | `NEXT_PUBLIC_E2E_TEST_MODE` | 開発/テスト専用。`true` にすると Playwright の自動勝利モードが有効になる。`NODE_ENV=production` では常に無効（`src/lib/e2e-test-mode.ts`）。本番では必ず `false`。 |
@@ -154,9 +155,14 @@ npm run start
 ## Vercelデプロイ方法
 
 1. [Neon](https://neon.tech) 等でPostgreSQLデータベースを作成し、接続文字列を取得する。
+   **`DATABASE_URL` には必ず Neon の「pooled connection string」(ホスト名に `-pooler` が付く方) を使う**。
+   Vercelはサーバーレス関数のため同時に多数のインスタンスが立ち上がり得り、各インスタンスが
+   個別のDB接続プールを持つ(`src/infrastructure/database/prisma.ts`)。pooled接続を使わずに直接
+   接続を使うと、同時アクセスが増えたときにNeon側の接続数上限にすぐ達してエラーになる。
 2. Vercelにリポジトリをインポートする。
 3. Vercelの環境変数に `DATABASE_URL` / `AUTH_SECRET` / `NEXTAUTH_URL`（本番URL）を設定する。
-   `NEXT_PUBLIC_E2E_TEST_MODE` は設定しない（未設定 = 無効）。
+   `NEXT_PUBLIC_E2E_TEST_MODE` は設定しない(未設定 = 無効)。想定同時接続数が多い場合は
+   `DATABASE_POOL_MAX` を調整する(詳細は `.env.example`)。
 4. ビルドコマンドの前に `npx prisma migrate deploy` を実行するようにする
    （例: Vercelの "Build Command" を `npx prisma migrate deploy && npm run build` にする）。
 5. デプロイ後、初回のみ `npm run db:seed` を本番DBに対して実行するとマスターデータ

@@ -8,7 +8,11 @@ export function FocusHeader({ title, backHref, rightAction }: { title: string; b
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b border-arena-border px-2">
       {backHref ? (
-        <Link href={backHref} className="flex h-11 w-11 items-center justify-center rounded-full text-arena-silver hover:text-arena-white">
+        <Link
+          href={backHref}
+          aria-label="戻る"
+          className="flex h-11 w-11 items-center justify-center rounded-full text-arena-silver hover:text-arena-white"
+        >
           <ChevronLeft className="h-5 w-5" />
         </Link>
       ) : (

@@ -105,19 +105,27 @@ export default async function HomePage() {
           <div className="flex items-center gap-1">
             <a
               href="#announcements"
+              aria-label="お知らせ"
               className="flex h-9 w-9 items-center justify-center rounded-full text-arena-silver/80 hover:text-arena-white"
             >
               <Bell className="h-4 w-4" />
             </a>
             <Link
               href="/friends"
+              aria-label={
+                incomingFriendRequests.length > 0 ||
+                incomingChallenges.length > 0 ||
+                incomingTournamentInvites.length > 0
+                  ? "フレンド（未読の通知があります）"
+                  : "フレンド"
+              }
               className="relative flex h-9 w-9 items-center justify-center rounded-full text-arena-silver/80 hover:text-arena-white"
             >
               <Mail className="h-4 w-4" />
               {(incomingFriendRequests.length > 0 ||
                 incomingChallenges.length > 0 ||
                 incomingTournamentInvites.length > 0) && (
-                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-arena-danger" />
+                <span aria-hidden className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-arena-danger" />
               )}
             </Link>
           </div>

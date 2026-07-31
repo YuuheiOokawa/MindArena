@@ -13,6 +13,7 @@ export function LegalDocument({ title, children }: { title: string; children: Re
       <header className="flex h-14 shrink-0 items-center gap-2 border-b border-arena-border px-2">
         <button
           onClick={() => router.back()}
+          aria-label="戻る"
           className="flex h-11 w-11 items-center justify-center rounded-full text-arena-silver hover:text-arena-white"
         >
           <ChevronLeft className="h-5 w-5" />

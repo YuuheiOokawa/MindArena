@@ -115,5 +115,5 @@ test("demo user joins a tournament, plays through, and becomes champion", async 
   await expect(page.getByText("優勝", { exact: true })).toBeVisible();
 
   await page.goto("/profile");
-  await expect(page.getByText("優勝回数")).toBeVisible();
+  await expect(page.getByText("優勝回数", { exact: true })).toBeVisible();
 });

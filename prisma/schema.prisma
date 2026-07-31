@@ -209,6 +209,10 @@ model PlayerProfile {
   ownedFurniture            UserOwnedFurniture[]
 
   @@index([totalPoints])
+  /** Covers the league-scoped leaderboard (features/leaderboard/leaderboard.service.ts's
+   * scope: "league") — countAbovePoints/countAll filter by currentLeagueId + totalPoints
+   * together; the single-column totalPoints index above only helps the global (unscoped) case. */
+  @@index([currentLeagueId, totalPoints])
   @@map("player_profiles")
 }
 
@@ -656,6 +660,12 @@ model TournamentParticipant {
 
   @@unique([tournamentId, playerId])
   @@index([tournamentId, status])
+  /** Covers "find all of this player's participant rows across every tournament they've ever
+   * joined" (features/profiles/match-history.service.ts's getMyMatchHistory/getMyWinRateTrend —
+   * hit on every Home/Profile/History page load). Without this, playerId has no index of its
+   * own (Postgres doesn't auto-index FK columns), so the query degrades to a full table scan as
+   * tournament_participants grows with usage. */
+  @@index([playerId])
   @@map("tournament_participants")
 }
 
@@ -681,6 +691,11 @@ model TournamentMatch {
   result  MatchResult?
 
   @@index([tournamentId, round])
+  /** Covers match-history.service.ts's `OR: [{ player1ParticipantId: { in } }, { player2ParticipantId: { in } }]`
+   * lookup (a player's full match history across all tournaments) — a Bitmap-Or plan over these
+   * two indexes replaces what would otherwise be a full table scan. */
+  @@index([player1ParticipantId])
+  @@index([player2ParticipantId])
   @@map("tournament_matches")
 }
 

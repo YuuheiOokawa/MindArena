@@ -1,12 +1,15 @@
 import { prisma } from "@/infrastructure/database/prisma";
+import { memoizeWithTtl } from "@/infrastructure/database/ttl-cache";
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 
 type Tx = Prisma.TransactionClient | PrismaClient;
 
+/** Master data (achievements rarely change post-seed) — memoized to cut DB round-trips on this
+ * every-match-finalize / every-profile-view read. See infrastructure/database/ttl-cache.ts. */
+const findAllActiveCached = memoizeWithTtl(() => prisma.achievement.findMany({ where: { isActive: true } }), 60_000);
+
 export const achievementRepository = {
-  async findAllActive() {
-    return prisma.achievement.findMany({ where: { isActive: true } });
-  },
+  findAllActive: findAllActiveCached,
 
   async unlockedCodes(playerProfileId: string) {
     const rows = await prisma.playerAchievement.findMany({

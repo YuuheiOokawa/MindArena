@@ -57,7 +57,7 @@ export default function ContactPage() {
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-arena-silver">お問い合わせ種別</span>
             <select
-              className="h-11 rounded-xl border border-arena-border bg-arena-surface-2 px-3 text-sm text-arena-white focus:border-arena-primary focus:outline-none"
+              className="h-11 rounded-xl border border-arena-border bg-arena-surface-2 px-3 text-sm text-arena-white focus:border-arena-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-arena-primary-soft"
               defaultValue=""
               {...register("category")}
             >
@@ -83,7 +83,7 @@ export default function ContactPage() {
             <span className="text-xs font-medium text-arena-silver">お問い合わせ内容</span>
             <textarea
               rows={6}
-              className="rounded-xl border border-arena-border bg-arena-surface-2 px-3 py-2.5 text-sm text-arena-white placeholder:text-arena-silver/40 focus:border-arena-primary focus:outline-none"
+              className="rounded-xl border border-arena-border bg-arena-surface-2 px-3 py-2.5 text-sm text-arena-white placeholder:text-arena-silver/40 focus:border-arena-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-arena-primary-soft"
               placeholder="内容をできるだけ詳しくご記入ください。"
               {...register("message")}
             />

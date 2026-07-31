@@ -1,4 +1,5 @@
 import { prisma } from "@/infrastructure/database/prisma";
+import { memoizeWithTtl } from "@/infrastructure/database/ttl-cache";
 import type { LeagueEntity } from "@/domain/entities";
 import { GAME_CATALOG } from "@/config/games";
 
@@ -41,11 +42,15 @@ function toEntity(row: {
   };
 }
 
+/** Master data (leagues rarely change post-seed) — memoized to cut DB round-trips on this
+ * near-every-page-load read. See infrastructure/database/ttl-cache.ts. */
+const findAllActiveCached = memoizeWithTtl(async (): Promise<LeagueEntity[]> => {
+  const rows = await prisma.league.findMany({ where: { isActive: true }, orderBy: { displayOrder: "asc" } });
+  return rows.map(toEntity);
+}, 60_000);
+
 export const leagueRepository = {
-  async findAllActive(): Promise<LeagueEntity[]> {
-    const rows = await prisma.league.findMany({ where: { isActive: true }, orderBy: { displayOrder: "asc" } });
-    return rows.map(toEntity);
-  },
+  findAllActive: findAllActiveCached,
 
   async findById(id: string) {
     return prisma.league.findUnique({ where: { id } });

@@ -139,12 +139,14 @@ export default async function ProfilePage() {
           <div className="flex items-center gap-2">
             <Link
               href="/profile/edit"
+              aria-label="プロフィールを編集"
               className="flex h-9 w-9 items-center justify-center rounded-full border border-arena-border text-arena-silver"
             >
               <Pencil className="h-4 w-4" />
             </Link>
             <Link
               href="/settings"
+              aria-label="設定"
               className="flex h-9 w-9 items-center justify-center rounded-full border border-arena-border text-arena-silver"
             >
               <Settings className="h-4 w-4" />

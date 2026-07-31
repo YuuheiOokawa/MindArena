@@ -15,6 +15,7 @@
 6. [ER図](#6-er図)
 7. [機能説明](#7-機能説明)
 8. [主要API一覧](#8-主要api一覧)
+9. [スケーラビリティ・アクセシビリティ](#9-スケーラビリティアクセシビリティ)
 
 ---
 
@@ -619,6 +620,41 @@ Next.js Route Handler (`src/app/api/**/route.ts`) として実装。認証が必
 | デイリー | `GET/POST /api/daily-bonus`, `/api/daily-bonus/claim`, `/api/daily-missions`, `/api/daily-missions/claim` |
 | フレンド | `GET/POST /api/friends`, `/requests`, `/challenges`, `/blocked`, `/search` |
 | サポート | `POST /api/support/inquiries` |
+
+## 9. スケーラビリティ・アクセシビリティ
+
+より多くのユーザーが同時に・多様な条件で使えるようにするための対応。
+
+### 9.1 スケーラビリティ(同時接続数)
+
+- **DBコネクションプール**: `src/infrastructure/database/prisma.ts` の `pg.Pool` に明示的な
+  `max`(デフォルト5)・`idleTimeoutMillis`・`connectionTimeoutMillis` を設定。デプロイ想定が
+  Vercelサーバーレスのため、インスタンスごとに小さめのプールを持たせ、**本番ではNeonの
+  pooled接続文字列(`-pooler`)を必須とする**ことでNeon側の接続数上限に達しにくくしている
+  (`DATABASE_POOL_MAX` 環境変数で調整可能)。
+- **マスタデータのメモ化キャッシュ**: リーグ・ゲーム種別・実績・部屋タイプ・家具・BOTプロフィール
+  は `prisma/seed.ts` で投入される「ほぼ不変」のマスタデータでありながら、ほぼ全ページで
+  読み込まれる。`src/infrastructure/database/ttl-cache.ts` の `memoizeWithTtl`(60秒TTL、
+  同時キャッシュミスの多重リクエストも1回のクエリに集約)でリポジトリ層をラップし、
+  DBラウンドトリップを大幅に削減。プレイヤー固有データ(プロフィール・ポイント・実績解除状況等)
+  はキャッシュ対象外。
+- **DBインデックス追加**(`performance_indexes` マイグレーション): `TournamentParticipant.playerId`
+  ・`TournamentMatch.player1ParticipantId`/`player2ParticipantId`・
+  `PlayerProfile.(currentLeagueId, totalPoints)`。特に対戦履歴取得
+  (`features/profiles/match-history.service.ts`、ホーム/プロフィール/戦績画面で使用)は
+  外部キー列に専用インデックスがなくフルスキャンになっていた箇所で、利用者数増加に伴う
+  対戦数の増加でも劣化しないようにした。
+
+### 9.2 アクセシビリティ
+
+- **ピンチズームの解放**: `viewport` から `maximumScale: 1` / `userScalable: false` を削除
+  (WCAG 1.4.4 Resize Text 対応)。低視力ユーザーが拡大表示できないことは致命的な利用障壁と判断。
+- **アイコンのみの操作要素にaria-label付与**: 通知ベル・フレンド(メール)アイコン・
+  プロフィール編集・設定・各画面共通の「戻る」ボタン(`FocusHeader`/`LegalDocument`)など、
+  視覚的にアイコンのみで意味が伝わらない操作にスクリーンリーダー向けラベルを追加。
+  設定画面のトグルスイッチにも `aria-label` を付与。
+- **フォーカスインジケーターの強化**: 共通 `Input` コンポーネントおよびお問い合わせフォームの
+  入力欄に `focus-visible:ring-2` を追加し、キーボード操作時のフォーカス位置が視認しやすいよう強化。
 
 ---
 

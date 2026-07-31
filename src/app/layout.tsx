@@ -9,11 +9,12 @@ export const metadata: Metadata = {
   description: APP_CONFIG.tagline,
 };
 
+// maximumScale/userScalable are deliberately left at their default (unrestricted) — locking
+// pinch-zoom fails WCAG 1.4.4 (Resize Text) and blocks low-vision users from using the app at
+// all, which is a harder failure than any layout wobble zooming might cause.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   themeColor: "#05070d",
 };
 
